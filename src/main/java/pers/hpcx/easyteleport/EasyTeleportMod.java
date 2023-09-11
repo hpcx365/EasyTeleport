@@ -32,7 +32,7 @@ import static pers.hpcx.easyteleport.EasyTeleportConfigEnum.STACK_DEPTH;
 public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallback {
     
     public static final String MOD_ID = "easyteleport";
-    public static final Path MOD_CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve("easyTeleport.properties");
+    public static final Path MOD_CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve("easy-teleport.properties");
     
     public int stackDepth = 8;
     public int anchorLimit = 16;
@@ -76,28 +76,28 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
         Predicate<ServerCommandSource> isPlayer = ServerCommandSource::isExecutedByPlayer;
         Predicate<ServerCommandSource> isOperator = source -> source.hasPermissionLevel(4);
         
-        dispatcher.register(
-                literal("anchor").requires(isPlayer).then(literal("set").then(argument("anchorName", StringArgumentType.string()).executes(this::setAnchor))));
+        dispatcher.register(literal("tpb").requires(isPlayer).executes(this::teleportBack));
         
-        dispatcher.register(literal("anchor").requires(isPlayer).then(literal("remove").then(
-                argument("anchorName", StringArgumentType.string()).suggests(AnchorSuggestionProvider.suggestions()).executes(this::removeAnchor))));
+        dispatcher.register(literal("tpp").requires(isPlayer).executes(this::teleportReturn));
+        
+        dispatcher.register(literal("tpp").requires(isPlayer)
+                .then(argument("anchor-name", StringArgumentType.string()).suggests(AnchorSuggestionProvider.suggestions()).executes(this::teleport)));
         
         dispatcher.register(literal("anchor").requires(isPlayer).then(literal("list").executes(this::listAnchors)));
         
         dispatcher.register(literal("anchor").requires(isPlayer).then(literal("clear").executes(this::clearAnchors)));
         
-        dispatcher.register(literal("anchor").requires(isPlayer)
-                .then(literal("limit").requires(isOperator).then(argument("anchorLimit", IntegerArgumentType.integer(0)).executes(this::setAnchorLimit))));
+        dispatcher.register(
+                literal("anchor").requires(isPlayer).then(literal("set").then(argument("anchor-name", StringArgumentType.string()).executes(this::setAnchor))));
         
-        dispatcher.register(literal("tpp").requires(isPlayer)
-                .then(argument("anchorName", StringArgumentType.string()).suggests(AnchorSuggestionProvider.suggestions()).executes(this::tpp)));
+        dispatcher.register(literal("anchor").requires(isPlayer).then(literal("remove").then(
+                argument("anchor-name", StringArgumentType.string()).suggests(AnchorSuggestionProvider.suggestions()).executes(this::removeAnchor))));
         
-        dispatcher.register(literal("tpb").requires(isPlayer).executes(this::back));
+        dispatcher.register(literal("config").requires(isOperator)
+                .then(literal("depth").then(argument(STACK_DEPTH.getKey(), STACK_DEPTH.getType()).executes(this::setStackDepth))));
         
-        dispatcher.register(literal("tpp").requires(isPlayer).executes(this::unback));
-        
-        dispatcher.register(literal("tpp").requires(isPlayer)
-                .then(literal("depth").requires(isOperator).then(argument("stackDepth", IntegerArgumentType.integer(1)).executes(this::setStackDepth))));
+        dispatcher.register(literal("config").requires(isOperator)
+                .then(literal("limit").then(argument(ANCHOR_LIMIT.getKey(), ANCHOR_LIMIT.getType()).executes(this::setAnchorLimit))));
     }
     
     public static String toString(Vec3d position) {
@@ -116,40 +116,6 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
             source.sendMessage(comp);
         } else {
             source.sendError(comp);
-        }
-    }
-    
-    public int setAnchor(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-        ServerCommandSource source = context.getSource();
-        ServerPlayerEntity player = source.getPlayerOrThrow();
-        Map<String, Anchor> anchors = ((AnchorStorage) player).easyTeleport$getAnchors();
-        if (anchors.size() < anchorLimit) {
-            Vec3d position = player.getPos();
-            String anchorName = StringArgumentType.getString(context, "anchorName");
-            Anchor anchor = new Anchor(position, player.getWorld().getRegistryKey());
-            anchors.put(anchorName, anchor);
-            sendMessage(source, true, Text.literal("Anchor ").formatted(GREEN), Text.literal(anchorName).formatted(YELLOW),
-                    Text.literal(" set at ").formatted(GREEN), Text.literal(toString(position)).formatted(GRAY));
-            return 1;
-        } else {
-            sendMessage(source, false, Text.literal("Anchor count limit exceeded.").formatted(RED));
-            return 0;
-        }
-    }
-    
-    public int removeAnchor(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-        ServerCommandSource source = context.getSource();
-        ServerPlayerEntity player = source.getPlayerOrThrow();
-        Map<String, Anchor> anchors = ((AnchorStorage) player).easyTeleport$getAnchors();
-        String anchorName = StringArgumentType.getString(context, "anchorName");
-        if (anchors.keySet().remove(anchorName)) {
-            sendMessage(source, true, Text.literal("Anchor ").formatted(GREEN), Text.literal(anchorName).formatted(YELLOW),
-                    Text.literal(" removed.").formatted(GREEN));
-            return 1;
-        } else {
-            sendMessage(source, false, Text.literal("Anchor ").formatted(GRAY), Text.literal(anchorName).formatted(RED),
-                    Text.literal(" not set.").formatted(GRAY));
-            return 0;
         }
     }
     
@@ -186,27 +152,46 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
         }
     }
     
-    public int setAnchorLimit(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+    public int setAnchor(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         ServerCommandSource source = context.getSource();
-        anchorLimit = IntegerArgumentType.getInteger(context, "anchorLimit");
-        sendMessage(source, true, Text.literal("Anchor count limit set to ").formatted(GREEN), Text.literal(Integer.toString(anchorLimit)).formatted(GOLD));
-        try (OutputStream out = new BufferedOutputStream(Files.newOutputStream(MOD_CONFIG_PATH))) {
-            Properties properties = new Properties();
-            properties.setProperty(ANCHOR_LIMIT.getKey(), Integer.toString(anchorLimit));
-            properties.store(out, "easy-teleport mod config");
+        ServerPlayerEntity player = source.getPlayerOrThrow();
+        Map<String, Anchor> anchors = ((AnchorStorage) player).easyTeleport$getAnchors();
+        if (anchors.size() < anchorLimit) {
+            Vec3d position = player.getPos();
+            String anchorName = StringArgumentType.getString(context, "anchor-name");
+            Anchor anchor = new Anchor(position, player.getWorld().getRegistryKey());
+            anchors.put(anchorName, anchor);
+            sendMessage(source, true, Text.literal("Anchor ").formatted(GREEN), Text.literal(anchorName).formatted(YELLOW),
+                    Text.literal(" set at ").formatted(GREEN), Text.literal(toString(position)).formatted(GRAY));
             return 1;
-        } catch (IOException e) {
-            sendMessage(source, false, Text.literal("Failed to write config file: ").formatted(GRAY), Text.literal(e.getMessage()).formatted(RED));
+        } else {
+            sendMessage(source, false, Text.literal("Anchor count limit exceeded.").formatted(RED));
             return 0;
         }
     }
     
-    public int tpp(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+    public int removeAnchor(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         ServerCommandSource source = context.getSource();
         ServerPlayerEntity player = source.getPlayerOrThrow();
         Map<String, Anchor> anchors = ((AnchorStorage) player).easyTeleport$getAnchors();
-        OperationStack<Anchor> stack = ((AnchorStorage) player).easyTeleport$getTeleportStack(this);
-        String anchorName = StringArgumentType.getString(context, "anchorName");
+        String anchorName = StringArgumentType.getString(context, "anchor-name");
+        if (anchors.keySet().remove(anchorName)) {
+            sendMessage(source, true, Text.literal("Anchor ").formatted(GREEN), Text.literal(anchorName).formatted(YELLOW),
+                    Text.literal(" removed.").formatted(GREEN));
+            return 1;
+        } else {
+            sendMessage(source, false, Text.literal("Anchor ").formatted(GRAY), Text.literal(anchorName).formatted(RED),
+                    Text.literal(" not set.").formatted(GRAY));
+            return 0;
+        }
+    }
+    
+    public int teleport(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        ServerCommandSource source = context.getSource();
+        ServerPlayerEntity player = source.getPlayerOrThrow();
+        Map<String, Anchor> anchors = ((AnchorStorage) player).easyTeleport$getAnchors();
+        OperationStack<Anchor> stack = ((AnchorStorage) player).easyTeleport$getStack(this);
+        String anchorName = StringArgumentType.getString(context, "anchor-name");
         Anchor anchor = anchors.get(anchorName);
         if (anchor == null) {
             sendMessage(source, false, Text.literal("Anchor ").formatted(GRAY), Text.literal(anchorName).formatted(RED),
@@ -221,13 +206,13 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
         }
     }
     
-    public int back(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+    public int teleportBack(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         ServerCommandSource source = context.getSource();
         ServerPlayerEntity player = source.getPlayerOrThrow();
-        OperationStack<Anchor> stack = ((AnchorStorage) player).easyTeleport$getTeleportStack(this);
+        OperationStack<Anchor> stack = ((AnchorStorage) player).easyTeleport$getStack(this);
         Anchor anchor = stack.revoke();
         if (anchor == null) {
-            sendMessage(source, false, Text.literal("Cannot back anymore.").formatted(GRAY));
+            sendMessage(source, false, Text.literal("Cannot tpb anymore.").formatted(GRAY));
             return 0;
         } else {
             Vec3d position = anchor.position();
@@ -237,13 +222,13 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
         }
     }
     
-    public int unback(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+    public int teleportReturn(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         ServerCommandSource source = context.getSource();
         ServerPlayerEntity player = source.getPlayerOrThrow();
-        OperationStack<Anchor> stack = ((AnchorStorage) player).easyTeleport$getTeleportStack(this);
+        OperationStack<Anchor> stack = ((AnchorStorage) player).easyTeleport$getStack(this);
         Anchor anchor = stack.invoke();
         if (anchor == null) {
-            sendMessage(source, false, Text.literal("Cannot unback anymore.").formatted(GRAY));
+            sendMessage(source, false, Text.literal("Cannot tpp anymore.").formatted(GRAY));
             return 0;
         } else {
             Vec3d position = anchor.position();
@@ -255,11 +240,26 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
     
     public int setStackDepth(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         ServerCommandSource source = context.getSource();
-        stackDepth = IntegerArgumentType.getInteger(context, "stackDepth");
-        sendMessage(source, true, Text.literal("Teleport stack depth set to ").formatted(GREEN), Text.literal(Integer.toString(stackDepth)).formatted(GOLD));
+        stackDepth = IntegerArgumentType.getInteger(context, STACK_DEPTH.getKey());
+        sendMessage(source, true, Text.literal("Stack depth set to ").formatted(GREEN), Text.literal(Integer.toString(stackDepth)).formatted(GOLD));
         try (OutputStream out = new BufferedOutputStream(Files.newOutputStream(MOD_CONFIG_PATH))) {
             Properties properties = new Properties();
             properties.setProperty(STACK_DEPTH.getKey(), Integer.toString(stackDepth));
+            properties.store(out, "easy-teleport mod config");
+            return 1;
+        } catch (IOException e) {
+            sendMessage(source, false, Text.literal("Failed to write config file: ").formatted(GRAY), Text.literal(e.getMessage()).formatted(RED));
+            return 0;
+        }
+    }
+    
+    public int setAnchorLimit(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        ServerCommandSource source = context.getSource();
+        anchorLimit = IntegerArgumentType.getInteger(context, ANCHOR_LIMIT.getKey());
+        sendMessage(source, true, Text.literal("Anchor limit set to ").formatted(GREEN), Text.literal(Integer.toString(anchorLimit)).formatted(GOLD));
+        try (OutputStream out = new BufferedOutputStream(Files.newOutputStream(MOD_CONFIG_PATH))) {
+            Properties properties = new Properties();
+            properties.setProperty(ANCHOR_LIMIT.getKey(), Integer.toString(anchorLimit));
             properties.store(out, "easy-teleport mod config");
             return 1;
         } catch (IOException e) {

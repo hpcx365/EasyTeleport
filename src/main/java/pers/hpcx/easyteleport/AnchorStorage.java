@@ -8,5 +8,5 @@ public interface AnchorStorage {
     
     @NotNull Map<String, Anchor> easyTeleport$getAnchors();
     
-    @NotNull OperationStack<Anchor> easyTeleport$getTeleportStack(EasyTeleportMod mod);
+    @NotNull OperationStack<Anchor> easyTeleport$getStack(EasyTeleportMod mod);
 }

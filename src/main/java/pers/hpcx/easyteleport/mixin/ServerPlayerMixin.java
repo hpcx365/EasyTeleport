@@ -20,7 +20,7 @@ import java.util.Map;
 public class ServerPlayerMixin implements AnchorStorage {
     
     @Unique
-    private OperationStack<Anchor> teleportStack = null;
+    private OperationStack<Anchor> stack = null;
     @Unique
     private Map<String, Anchor> anchors = new HashMap<>();
     
@@ -30,40 +30,42 @@ public class ServerPlayerMixin implements AnchorStorage {
     }
     
     @Override
-    public @NotNull OperationStack<Anchor> easyTeleport$getTeleportStack(EasyTeleportMod mod) {
-        if (teleportStack == null) {
-            teleportStack = new OperationStack<>(mod.stackDepth);
+    public @NotNull OperationStack<Anchor> easyTeleport$getStack(EasyTeleportMod mod) {
+        if (stack == null) {
+            stack = new OperationStack<>(mod.stackDepth);
         }
-        return teleportStack;
+        return stack;
     }
     
     @Inject(at = @At("RETURN"), method = "readCustomDataFromNbt(Lnet/minecraft/nbt/NbtCompound;)V")
     public void readCustomDataFromNbt(NbtCompound nbt, CallbackInfo c) {
-        NbtCompound data = null;
+        NbtCompound modData = null;
         if (nbt.contains(EasyTeleportMod.MOD_ID)) {
-            data = nbt.getCompound(EasyTeleportMod.MOD_ID);
+            modData = nbt.getCompound(EasyTeleportMod.MOD_ID);
         } else if (nbt.contains("PlayerPersisted") && nbt.getCompound("PlayerPersisted").contains(EasyTeleportMod.MOD_ID)) {
-            data = nbt.getCompound("PlayerPersisted").getCompound(EasyTeleportMod.MOD_ID);
+            modData = nbt.getCompound("PlayerPersisted").getCompound(EasyTeleportMod.MOD_ID);
         }
-        if (data != null && data.contains("anchorData")) {
-            NbtCompound anchorData = data.getCompound("anchorData");
-            for (String name : anchorData.getKeys()) {
-                anchors.put(name, Anchor.fromCompound(anchorData.getCompound(name)));
+        if (modData != null && modData.contains("anchors")) {
+            NbtCompound anchorData = modData.getCompound("anchors");
+            for (String anchorName : anchorData.getKeys()) {
+                anchors.put(anchorName, Anchor.fromCompound(anchorData.getCompound(anchorName)));
             }
         }
     }
     
     @Inject(at = @At("RETURN"), method = "writeCustomDataToNbt(Lnet/minecraft/nbt/NbtCompound;)V")
     public void writeCustomDataToNbt(NbtCompound nbt, CallbackInfo c) {
-        NbtCompound data = new NbtCompound();
+        NbtCompound modData = new NbtCompound();
         NbtCompound anchorData = new NbtCompound();
-        anchors.forEach((name, anchor) -> anchorData.put(name, anchor.toCompound()));
-        data.put("anchorData", anchorData);
-        nbt.put(EasyTeleportMod.MOD_ID, data);
+        anchors.forEach((anchorName, anchor) -> anchorData.put(anchorName, anchor.toCompound()));
+        modData.put("anchors", anchorData);
+        nbt.put(EasyTeleportMod.MOD_ID, modData);
     }
     
     @Inject(at = @At("RETURN"), method = "copyFrom(Lnet/minecraft/server/network/ServerPlayerEntity;Z)V")
     public void copyFrom(ServerPlayerEntity oldPlayer, boolean alive, CallbackInfo c) {
-        anchors = ((ServerPlayerMixin) (Object) oldPlayer).anchors;
+        ServerPlayerMixin mixin = (ServerPlayerMixin) (Object) oldPlayer;
+        stack = mixin.stack;
+        anchors = mixin.anchors;
     }
 }
