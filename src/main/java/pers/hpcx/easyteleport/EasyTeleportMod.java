@@ -26,8 +26,7 @@ import java.util.function.Predicate;
 
 import static net.minecraft.server.command.CommandManager.*;
 import static net.minecraft.util.Formatting.*;
-import static pers.hpcx.easyteleport.EasyTeleportConfigEnum.ANCHOR_LIMIT;
-import static pers.hpcx.easyteleport.EasyTeleportConfigEnum.STACK_DEPTH;
+import static pers.hpcx.easyteleport.EasyTeleportConfigEnum.*;
 
 public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallback {
     
@@ -36,6 +35,7 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
     
     public int stackDepth = 8;
     public int anchorLimit = 16;
+    public int requestTimeout = 5000;
     
     @Override
     public void onInitialize() {
@@ -51,11 +51,15 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
                     properties.load(in);
                     String stackDepth = properties.getProperty(STACK_DEPTH.getKey());
                     String anchorLimit = properties.getProperty(ANCHOR_LIMIT.getKey());
+                    String requestTimeout = properties.getProperty(REQUEST_TIMEOUT_MILLIS.getKey());
                     if (stackDepth != null) {
                         this.stackDepth = Integer.parseInt(stackDepth);
                     }
                     if (anchorLimit != null) {
                         this.anchorLimit = Integer.parseInt(anchorLimit);
+                    }
+                    if (requestTimeout != null) {
+                        this.requestTimeout = Integer.parseInt(requestTimeout);
                     }
                 }
             } else {
@@ -64,6 +68,7 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
                     Properties properties = new Properties();
                     properties.setProperty(STACK_DEPTH.getKey(), Integer.toString(stackDepth));
                     properties.setProperty(ANCHOR_LIMIT.getKey(), Integer.toString(anchorLimit));
+                    properties.setProperty(REQUEST_TIMEOUT_MILLIS.getKey(), Integer.toString(requestTimeout));
                     properties.store(out, "easy-teleport mod config");
                 }
             }
@@ -98,6 +103,9 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
         
         dispatcher.register(literal("config").requires(isOperator)
                 .then(literal("limit").then(argument(ANCHOR_LIMIT.getKey(), ANCHOR_LIMIT.getType()).executes(this::setAnchorLimit))));
+        
+        dispatcher.register(literal("config").requires(isOperator)
+                .then(literal("timeout").then(argument(REQUEST_TIMEOUT_MILLIS.getKey(), REQUEST_TIMEOUT_MILLIS.getType()).executes(this::setRequestTimeout))));
     }
     
     public static String toString(Vec3d position) {
@@ -238,28 +246,27 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
         }
     }
     
-    public int setStackDepth(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-        ServerCommandSource source = context.getSource();
+    public int setStackDepth(CommandContext<ServerCommandSource> context) {
         stackDepth = IntegerArgumentType.getInteger(context, STACK_DEPTH.getKey());
-        sendMessage(source, true, Text.literal("Stack depth set to ").formatted(GREEN), Text.literal(Integer.toString(stackDepth)).formatted(GOLD));
-        try (OutputStream out = new BufferedOutputStream(Files.newOutputStream(MOD_CONFIG_PATH))) {
-            Properties properties = new Properties();
-            properties.setProperty(STACK_DEPTH.getKey(), Integer.toString(stackDepth));
-            properties.store(out, "easy-teleport mod config");
-            return 1;
-        } catch (IOException e) {
-            sendMessage(source, false, Text.literal("Failed to write config file: ").formatted(GRAY), Text.literal(e.getMessage()).formatted(RED));
-            return 0;
-        }
+        return storeProperty(context.getSource(), STACK_DEPTH.getKey(), Integer.toString(stackDepth));
     }
     
-    public int setAnchorLimit(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-        ServerCommandSource source = context.getSource();
+    public int setAnchorLimit(CommandContext<ServerCommandSource> context) {
         anchorLimit = IntegerArgumentType.getInteger(context, ANCHOR_LIMIT.getKey());
-        sendMessage(source, true, Text.literal("Anchor limit set to ").formatted(GREEN), Text.literal(Integer.toString(anchorLimit)).formatted(GOLD));
+        return storeProperty(context.getSource(), ANCHOR_LIMIT.getKey(), Integer.toString(anchorLimit));
+    }
+    
+    public int setRequestTimeout(CommandContext<ServerCommandSource> context) {
+        requestTimeout = IntegerArgumentType.getInteger(context, REQUEST_TIMEOUT_MILLIS.getKey());
+        return storeProperty(context.getSource(), REQUEST_TIMEOUT_MILLIS.getKey(), Integer.toString(requestTimeout));
+    }
+    
+    public int storeProperty(ServerCommandSource source, String key, String value) {
+        sendMessage(source, true, Text.literal(key).formatted(LIGHT_PURPLE), Text.literal(" set to ").formatted(GREEN), Text.literal(value).formatted(GOLD),
+                Text.literal(" successfully.").formatted(GREEN));
         try (OutputStream out = new BufferedOutputStream(Files.newOutputStream(MOD_CONFIG_PATH))) {
             Properties properties = new Properties();
-            properties.setProperty(ANCHOR_LIMIT.getKey(), Integer.toString(anchorLimit));
+            properties.setProperty(key, value);
             properties.store(out, "easy-teleport mod config");
             return 1;
         } catch (IOException e) {
