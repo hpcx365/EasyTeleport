@@ -1,5 +1,6 @@
 package pers.hpcx.easyteleport;
 
+import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -9,6 +10,7 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.command.CommandRegistryAccess;
+import net.minecraft.command.argument.GameProfileArgumentType;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.MutableText;
@@ -19,9 +21,7 @@ import net.minecraft.util.math.Vec3d;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 import java.util.function.Predicate;
 
 import static net.minecraft.server.command.CommandManager.*;
@@ -36,6 +36,8 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
     public int stackDepth = 8;
     public int anchorLimit = 16;
     public int requestTimeout = 5000;
+    
+    public final Map<UUID, List<Request>> requests = new HashMap<>();
     
     @Override
     public void onInitialize() {
@@ -87,6 +89,9 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
         
         dispatcher.register(literal("tpp").requires(isPlayer)
                 .then(argument("anchor-name", StringArgumentType.string()).suggests(AnchorSuggestionProvider.suggestions()).executes(this::teleport)));
+        
+        dispatcher.register(
+                literal("tpr").requires(isPlayer).then(argument("target-player", GameProfileArgumentType.gameProfile()).executes(this::teleportRequest)));
         
         dispatcher.register(literal("anchor").requires(isPlayer).then(literal("list").executes(this::listAnchors)));
         
@@ -177,6 +182,50 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
             sendMessage(source, true, Text.literal("Teleport to ").formatted(GREEN), Text.literal(toString(position)).formatted(GRAY));
             return 1;
         }
+    }
+    
+    public int teleportRequest(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        ServerCommandSource source = context.getSource();
+        ServerPlayerEntity player = source.getPlayerOrThrow();
+        Iterator<GameProfile> iterator = GameProfileArgumentType.getProfileArgument(context, "target-player").iterator();
+        if (!iterator.hasNext()) {
+            sendMessage(player.getCommandSource(), false, Text.literal("Target player not found.").formatted(RED));
+            return 0;
+        }
+        UUID playerID = player.getUuid();
+        UUID targetID = iterator.next().getId();
+        if (playerID.equals(targetID)) {
+            sendMessage(player.getCommandSource(), false, Text.literal("Cannot teleport to yourself.").formatted(RED));
+            return 0;
+        }
+        if (iterator.hasNext()) {
+            sendMessage(player.getCommandSource(), false, Text.literal("Please specify only one player.").formatted(RED));
+            return 0;
+        }
+        ServerPlayerEntity target = player.getServer().getPlayerManager().getPlayer(targetID);
+        if (target == null) {
+            sendMessage(player.getCommandSource(), false, Text.literal("Target player not found.").formatted(RED));
+            return 0;
+        }
+        List<Request> requestList = requests.get(targetID);
+        if (requestList == null) {
+            requests.put(targetID, requestList = new ArrayList<>());
+        } else {
+            for (Request request : requestList) {
+                if (request.sourceID.equals(playerID)) {
+                    sendMessage(player.getCommandSource(), false, Text.literal("You have requested to teleport to ").formatted(GRAY),
+                            Text.literal(target.getName().getString()).formatted(GOLD), Text.literal(".").formatted(GRAY));
+                    return 0;
+                }
+            }
+        }
+        requestList.add(new Request(playerID, targetID, requestTimeout / 50));
+        sendMessage(player.getCommandSource(), true, Text.literal("Requested to teleport to ").formatted(GREEN),
+                Text.literal(target.getName().getString()).formatted(GOLD), Text.literal(" successfully.").formatted(GREEN));
+        sendMessage(target.getCommandSource(), true, Text.literal(player.getName().getString()).formatted(GOLD),
+                Text.literal(" has requested to teleport to you. Type ").formatted(GREEN), Text.literal("/tpa").formatted(YELLOW),
+                Text.literal(" to accept.").formatted(GREEN));
+        return 1;
     }
     
     public int listAnchors(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
