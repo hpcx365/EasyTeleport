@@ -96,6 +96,8 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
         dispatcher.register(
                 literal("tpr").requires(isPlayer).then(argument("target-player", GameProfileArgumentType.gameProfile()).executes(this::teleportRequest)));
         
+        dispatcher.register(literal("tpa").requires(isPlayer).executes(this::teleportAcceptAll));
+        
         dispatcher.register(literal("anchor").requires(isPlayer).then(literal("list").executes(this::listAnchors)));
         
         dispatcher.register(literal("anchor").requires(isPlayer).then(literal("clear").executes(this::clearAnchors)));
@@ -181,7 +183,8 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
             Vec3d position = anchor.position();
             stack.tpp(new Anchor(player.getPos(), player.getWorld().getRegistryKey()), stackDepth);
             player.teleport(player.getServer().getWorld(anchor.world()), position.x, position.y, position.z, player.getYaw(), player.getPitch());
-            sendMessage(source, true, Text.literal("Teleport to ").formatted(GREEN), Text.literal(anchorName).formatted(YELLOW));
+            sendMessage(source, true, Text.literal("Teleport to ").formatted(GREEN), Text.literal(anchorName).formatted(YELLOW),
+                    Text.literal(" successfully.").formatted(GREEN));
             return 1;
         }
     }
@@ -259,6 +262,34 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
         sendMessage(target.getCommandSource(), true, Text.literal(player.getName().getString()).formatted(GOLD),
                 Text.literal(" has requested to teleport to you. Type ").formatted(GREEN), Text.literal("/tpa").formatted(YELLOW),
                 Text.literal(" to accept.").formatted(GREEN));
+        return 1;
+    }
+    
+    public int teleportAcceptAll(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        ServerCommandSource source = context.getSource();
+        ServerPlayerEntity targetPlayer = source.getPlayerOrThrow();
+        UUID targetID = targetPlayer.getUuid();
+        List<Request> requestList = requests.get(targetID);
+        if (requestList == null || requestList.isEmpty()) {
+            sendMessage(targetPlayer.getCommandSource(), false, Text.literal("You have no request to accept.").formatted(GRAY));
+            return 0;
+        }
+        for (Request request : requestList) {
+            ServerPlayerEntity sourcePlayer = targetPlayer.getServer().getPlayerManager().getPlayer(request.sourceID);
+            if (sourcePlayer == null) {
+                continue;
+            }
+            Vec3d position = targetPlayer.getPos();
+            AnchorStack stack = ((AnchorStorage) sourcePlayer).easyTeleport$getStack();
+            stack.tpp(new Anchor(sourcePlayer.getPos(), sourcePlayer.getWorld().getRegistryKey()), stackDepth);
+            sourcePlayer.teleport(targetPlayer.getServerWorld(), position.x, position.y, position.z, sourcePlayer.getYaw(), sourcePlayer.getPitch());
+            sendMessage(sourcePlayer.getCommandSource(), true, Text.literal("Teleport to ").formatted(GREEN),
+                    Text.literal(targetPlayer.getName().getString()).formatted(GOLD), Text.literal(" successfully.").formatted(GREEN));
+            sendMessage(targetPlayer.getCommandSource(), true, Text.literal(sourcePlayer.getName().getString()).formatted(GOLD),
+                    Text.literal(" is teleported to you.").formatted(GREEN));
+        }
+        requestList.clear();
+        requests.keySet().remove(targetID);
         return 1;
     }
     
