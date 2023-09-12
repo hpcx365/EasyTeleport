@@ -94,9 +94,9 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
                 .then(argument("anchor-name", StringArgumentType.string()).suggests(AnchorSuggestionProvider.suggestions()).executes(this::teleport)));
         
         dispatcher.register(
-                literal("tpr").requires(isPlayer).then(argument("target-player", GameProfileArgumentType.gameProfile()).executes(this::teleportRequest)));
+                literal("tpa").requires(isPlayer).then(argument("target-player", GameProfileArgumentType.gameProfile()).executes(this::teleportRequest)));
         
-        dispatcher.register(literal("tpa").requires(isPlayer).executes(this::teleportAcceptAll));
+        dispatcher.register(literal("tpaccept").requires(isPlayer).executes(this::teleportAcceptAll));
         
         dispatcher.register(literal("anchor").requires(isPlayer).then(literal("list").executes(this::listAnchors)));
         
@@ -260,7 +260,7 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
         sendMessage(player.getCommandSource(), true, Text.literal("Requested to teleport to ").formatted(GREEN),
                 Text.literal(target.getName().getString()).formatted(GOLD), Text.literal(" successfully.").formatted(GREEN));
         sendMessage(target.getCommandSource(), true, Text.literal(player.getName().getString()).formatted(GOLD),
-                Text.literal(" has requested to teleport to you. Type ").formatted(GREEN), Text.literal("/tpa").formatted(YELLOW),
+                Text.literal(" has requested to teleport to you. Type ").formatted(GREEN), Text.literal("/tpaccept").formatted(YELLOW),
                 Text.literal(" to accept.").formatted(GREEN));
         return 1;
     }
