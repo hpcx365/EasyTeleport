@@ -3,6 +3,7 @@
 build
 run
 **/build/
+!build/libs
 !src/**/build/
 
 # Ignore Gradle GUI config
