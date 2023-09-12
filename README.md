@@ -6,24 +6,32 @@ Made for servers! Clients don't have to install EasyTeleport to connect to the s
 
 ## Usage
 
-`/tpb` Teleport the player to the position where the command `/tpp <anchor-name>` was most recently called.
+`/tpb` Teleport to your previous position.
 
-`/tpp` Undo the `/tpb`.
+`/tpp` Revoke the command `/tpb`.
 
-`/tpp <anchor-name>` Teleport the player to a specific anchor.
+`/tpp <anchor-name>` Teleport you to a specific anchor.
 
-`/anchor list` List all anchors.
+`/tpa <target-player>` Request to teleport to the target player, if the request is accepted, the
+command `/tpb` can also take effect.
 
-`/anchor clear` Remove all anchors.
+`/tpaccept` Accept all requests that have not timed out.
 
-`/anchor set <anchor-name>` Set an anchor at the player's current position.
+`/anchor list` List all your anchors.
 
-`/anchor remove <anchor-name>` Remove an anchor.
+`/anchor clear` Remove all your anchors.
 
-`/config depth <stack-depth>` Set teleport stack depth, which can be set in **_easy-teleport.properties_** as well.
+`/anchor set <anchor-name>` Set an anchor at your current position.
 
-`/config limit <anchor-limit>` Set the maximum number of anchors that players can have, which can be set in *
-*_easy-teleport.properties_** as well.
+`/anchor remove <anchor-name>` Remove a specific anchor.
+
+`/config depth <stack-depth>` Set the teleport stack depth.
+
+`/config limit <anchor-limit>` Set the maximum number of anchors that players can have.
+
+`/config timeout <request-timeout>` Set the timeout of requests in milliseconds.
+
+`stack-depth`, `anchor-limit` and `request-timeout` can also be set in **_easy-teleport.properties_**.
 
 ## Github
 

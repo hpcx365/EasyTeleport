@@ -6,7 +6,7 @@ import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
 
 public enum EasyTeleportConfigEnum {
     
-    STACK_DEPTH(integer(1)), ANCHOR_LIMIT(integer(0)), REQUEST_TIMEOUT_MILLIS(integer(1000));
+    STACK_DEPTH(integer(1)), ANCHOR_LIMIT(integer(0)), REQUEST_TIMEOUT(integer(1000));
     
     private final String key;
     private final ArgumentType<?> type;

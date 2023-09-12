@@ -56,7 +56,7 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
                     properties.load(in);
                     String stackDepth = properties.getProperty(STACK_DEPTH.getKey());
                     String anchorLimit = properties.getProperty(ANCHOR_LIMIT.getKey());
-                    String requestTimeout = properties.getProperty(REQUEST_TIMEOUT_MILLIS.getKey());
+                    String requestTimeout = properties.getProperty(REQUEST_TIMEOUT.getKey());
                     if (stackDepth != null) {
                         this.stackDepth = Integer.parseInt(stackDepth);
                     }
@@ -73,7 +73,7 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
                     Properties properties = new Properties();
                     properties.setProperty(STACK_DEPTH.getKey(), Integer.toString(stackDepth));
                     properties.setProperty(ANCHOR_LIMIT.getKey(), Integer.toString(anchorLimit));
-                    properties.setProperty(REQUEST_TIMEOUT_MILLIS.getKey(), Integer.toString(requestTimeout));
+                    properties.setProperty(REQUEST_TIMEOUT.getKey(), Integer.toString(requestTimeout));
                     properties.store(out, "easy-teleport mod config");
                 }
             }
@@ -115,7 +115,7 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
                 .then(literal("limit").then(argument(ANCHOR_LIMIT.getKey(), ANCHOR_LIMIT.getType()).executes(this::setAnchorLimit))));
         
         dispatcher.register(literal("config").requires(isOperator)
-                .then(literal("timeout").then(argument(REQUEST_TIMEOUT_MILLIS.getKey(), REQUEST_TIMEOUT_MILLIS.getType()).executes(this::setRequestTimeout))));
+                .then(literal("timeout").then(argument(REQUEST_TIMEOUT.getKey(), REQUEST_TIMEOUT.getType()).executes(this::setRequestTimeout))));
     }
     
     public static String toString(Vec3d position) {
@@ -371,8 +371,8 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
     }
     
     public int setRequestTimeout(CommandContext<ServerCommandSource> context) {
-        requestTimeout = IntegerArgumentType.getInteger(context, REQUEST_TIMEOUT_MILLIS.getKey());
-        return storeProperty(context.getSource(), REQUEST_TIMEOUT_MILLIS.getKey(), Integer.toString(requestTimeout));
+        requestTimeout = IntegerArgumentType.getInteger(context, REQUEST_TIMEOUT.getKey());
+        return storeProperty(context.getSource(), REQUEST_TIMEOUT.getKey(), Integer.toString(requestTimeout));
     }
     
     public int storeProperty(ServerCommandSource source, String key, String value) {
