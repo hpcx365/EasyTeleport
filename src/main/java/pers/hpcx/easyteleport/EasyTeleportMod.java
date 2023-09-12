@@ -8,9 +8,11 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.command.argument.GameProfileArgumentType;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.MutableText;
@@ -43,6 +45,7 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
     public void onInitialize() {
         loadConfig();
         CommandRegistrationCallback.EVENT.register(this);
+        ServerTickEvents.END_SERVER_TICK.register(this::onServerTick);
     }
     
     public void loadConfig() {
@@ -132,6 +135,37 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
         }
     }
     
+    public void onServerTick(MinecraftServer server) {
+        if (requests.isEmpty()) {
+            return;
+        }
+        for (UUID targetID : requests.keySet()) {
+            List<Request> requestList = requests.get(targetID);
+            Iterator<Request> iterator = requestList.iterator();
+            while (iterator.hasNext()) {
+                Request request = iterator.next();
+                if (--request.keepAliveTicks <= 0) {
+                    iterator.remove();
+                    notifyRequestTimedOut(server, request.sourceID, request.targetID);
+                }
+            }
+            if (requestList.isEmpty()) {
+                requests.keySet().remove(targetID);
+            }
+        }
+    }
+    
+    public void notifyRequestTimedOut(MinecraftServer server, UUID sourceID, UUID targetID) {
+        ServerPlayerEntity source = server.getPlayerManager().getPlayer(sourceID);
+        ServerPlayerEntity target = server.getPlayerManager().getPlayer(targetID);
+        if (source != null && target != null) {
+            sendMessage(source.getCommandSource(), true, Text.literal("Teleport request to ").formatted(GRAY),
+                    Text.literal(target.getName().getString()).formatted(GOLD), Text.literal(" has timed out.").formatted(GRAY));
+            sendMessage(target.getCommandSource(), true, Text.literal("Teleport request from ").formatted(GRAY),
+                    Text.literal(source.getName().getString()).formatted(GOLD), Text.literal(" has timed out.").formatted(GRAY));
+        }
+    }
+    
     public int teleport(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         ServerCommandSource source = context.getSource();
         ServerPlayerEntity player = source.getPlayerOrThrow();
@@ -192,9 +226,9 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
             sendMessage(player.getCommandSource(), false, Text.literal("Target player not found.").formatted(RED));
             return 0;
         }
-        UUID playerID = player.getUuid();
+        UUID sourceID = player.getUuid();
         UUID targetID = iterator.next().getId();
-        if (playerID.equals(targetID)) {
+        if (sourceID.equals(targetID)) {
             sendMessage(player.getCommandSource(), false, Text.literal("Cannot teleport to yourself.").formatted(RED));
             return 0;
         }
@@ -212,14 +246,14 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
             requests.put(targetID, requestList = new ArrayList<>());
         } else {
             for (Request request : requestList) {
-                if (request.sourceID.equals(playerID)) {
+                if (request.sourceID.equals(sourceID)) {
                     sendMessage(player.getCommandSource(), false, Text.literal("You have requested to teleport to ").formatted(GRAY),
                             Text.literal(target.getName().getString()).formatted(GOLD), Text.literal(".").formatted(GRAY));
                     return 0;
                 }
             }
         }
-        requestList.add(new Request(playerID, targetID, requestTimeout / 50));
+        requestList.add(new Request(sourceID, targetID, requestTimeout / 50));
         sendMessage(player.getCommandSource(), true, Text.literal("Requested to teleport to ").formatted(GREEN),
                 Text.literal(target.getName().getString()).formatted(GOLD), Text.literal(" successfully.").formatted(GREEN));
         sendMessage(target.getCommandSource(), true, Text.literal(player.getName().getString()).formatted(GOLD),
