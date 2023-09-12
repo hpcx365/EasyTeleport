@@ -119,6 +119,58 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
         }
     }
     
+    public int teleport(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        ServerCommandSource source = context.getSource();
+        ServerPlayerEntity player = source.getPlayerOrThrow();
+        Map<String, Anchor> anchors = ((AnchorStorage) player).easyTeleport$getAnchors();
+        AnchorStack stack = ((AnchorStorage) player).easyTeleport$getStack();
+        String anchorName = StringArgumentType.getString(context, "anchor-name");
+        Anchor anchor = anchors.get(anchorName);
+        if (anchor == null) {
+            sendMessage(source, false, Text.literal("Anchor ").formatted(GRAY), Text.literal(anchorName).formatted(RED),
+                    Text.literal(" not set.").formatted(GRAY));
+            return 0;
+        } else {
+            Vec3d position = anchor.position();
+            stack.tpp(new Anchor(player.getPos(), player.getWorld().getRegistryKey()), stackDepth);
+            player.teleport(player.getServer().getWorld(anchor.world()), position.x, position.y, position.z, player.getYaw(), player.getPitch());
+            sendMessage(source, true, Text.literal("Teleport to ").formatted(GREEN), Text.literal(anchorName).formatted(YELLOW));
+            return 1;
+        }
+    }
+    
+    public int teleportBack(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        ServerCommandSource source = context.getSource();
+        ServerPlayerEntity player = source.getPlayerOrThrow();
+        AnchorStack stack = ((AnchorStorage) player).easyTeleport$getStack();
+        Anchor anchor = stack.tpb();
+        if (anchor == null) {
+            sendMessage(source, false, Text.literal("Cannot tpb anymore.").formatted(GRAY));
+            return 0;
+        } else {
+            Vec3d position = anchor.position();
+            player.teleport(player.getServer().getWorld(anchor.world()), position.x, position.y, position.z, player.getYaw(), player.getPitch());
+            sendMessage(source, true, Text.literal("Teleport to ").formatted(GREEN), Text.literal(toString(position)).formatted(GRAY));
+            return 1;
+        }
+    }
+    
+    public int teleportReturn(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        ServerCommandSource source = context.getSource();
+        ServerPlayerEntity player = source.getPlayerOrThrow();
+        AnchorStack stack = ((AnchorStorage) player).easyTeleport$getStack();
+        Anchor anchor = stack.tpp();
+        if (anchor == null) {
+            sendMessage(source, false, Text.literal("Cannot tpp anymore.").formatted(GRAY));
+            return 0;
+        } else {
+            Vec3d position = anchor.position();
+            player.teleport(player.getServer().getWorld(anchor.world()), position.x, position.y, position.z, player.getYaw(), player.getPitch());
+            sendMessage(source, true, Text.literal("Teleport to ").formatted(GREEN), Text.literal(toString(position)).formatted(GRAY));
+            return 1;
+        }
+    }
+    
     public int listAnchors(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         ServerCommandSource source = context.getSource();
         ServerPlayerEntity player = source.getPlayerOrThrow();
@@ -183,58 +235,6 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
             sendMessage(source, false, Text.literal("Anchor ").formatted(GRAY), Text.literal(anchorName).formatted(RED),
                     Text.literal(" not set.").formatted(GRAY));
             return 0;
-        }
-    }
-    
-    public int teleport(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-        ServerCommandSource source = context.getSource();
-        ServerPlayerEntity player = source.getPlayerOrThrow();
-        Map<String, Anchor> anchors = ((AnchorStorage) player).easyTeleport$getAnchors();
-        OperationStack<Anchor> stack = ((AnchorStorage) player).easyTeleport$getStack(this);
-        String anchorName = StringArgumentType.getString(context, "anchor-name");
-        Anchor anchor = anchors.get(anchorName);
-        if (anchor == null) {
-            sendMessage(source, false, Text.literal("Anchor ").formatted(GRAY), Text.literal(anchorName).formatted(RED),
-                    Text.literal(" not set.").formatted(GRAY));
-            return 0;
-        } else {
-            Vec3d position = anchor.position();
-            stack.invoke(new Anchor(player.getPos(), player.getWorld().getRegistryKey()));
-            player.teleport(player.getServer().getWorld(anchor.world()), position.x, position.y, position.z, player.getYaw(), player.getPitch());
-            sendMessage(source, true, Text.literal("Teleport to ").formatted(GREEN), Text.literal(anchorName).formatted(YELLOW));
-            return 1;
-        }
-    }
-    
-    public int teleportBack(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-        ServerCommandSource source = context.getSource();
-        ServerPlayerEntity player = source.getPlayerOrThrow();
-        OperationStack<Anchor> stack = ((AnchorStorage) player).easyTeleport$getStack(this);
-        Anchor anchor = stack.revoke();
-        if (anchor == null) {
-            sendMessage(source, false, Text.literal("Cannot tpb anymore.").formatted(GRAY));
-            return 0;
-        } else {
-            Vec3d position = anchor.position();
-            player.teleport(player.getServer().getWorld(anchor.world()), position.x, position.y, position.z, player.getYaw(), player.getPitch());
-            sendMessage(source, true, Text.literal("Teleport to ").formatted(GREEN), Text.literal(toString(position)).formatted(GRAY));
-            return 1;
-        }
-    }
-    
-    public int teleportReturn(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-        ServerCommandSource source = context.getSource();
-        ServerPlayerEntity player = source.getPlayerOrThrow();
-        OperationStack<Anchor> stack = ((AnchorStorage) player).easyTeleport$getStack(this);
-        Anchor anchor = stack.invoke();
-        if (anchor == null) {
-            sendMessage(source, false, Text.literal("Cannot tpp anymore.").formatted(GRAY));
-            return 0;
-        } else {
-            Vec3d position = anchor.position();
-            player.teleport(player.getServer().getWorld(anchor.world()), position.x, position.y, position.z, player.getYaw(), player.getPitch());
-            sendMessage(source, true, Text.literal("Teleport to ").formatted(GREEN), Text.literal(toString(position)).formatted(GRAY));
-            return 1;
         }
     }
     

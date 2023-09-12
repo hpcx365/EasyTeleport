@@ -6,7 +6,7 @@ import java.util.Map;
 
 public interface AnchorStorage {
     
-    @NotNull Map<String, Anchor> easyTeleport$getAnchors();
+    @NotNull AnchorStack easyTeleport$getStack();
     
-    @NotNull OperationStack<Anchor> easyTeleport$getStack(EasyTeleportMod mod);
+    @NotNull Map<String, Anchor> easyTeleport$getAnchors();
 }
