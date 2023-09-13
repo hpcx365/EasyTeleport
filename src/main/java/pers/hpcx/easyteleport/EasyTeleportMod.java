@@ -98,6 +98,10 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
         
         dispatcher.register(literal("tpaccept").requires(isPlayer).executes(this::teleportAcceptAll));
         
+        dispatcher.register(literal("home").requires(isPlayer).executes(this::home));
+        
+        dispatcher.register(literal("sethome").requires(isPlayer).executes(this::setHome));
+        
         dispatcher.register(literal("anchor").requires(isPlayer).then(literal("list").executes(this::listAnchors)));
         
         dispatcher.register(literal("anchor").requires(isPlayer).then(literal("clear").executes(this::clearAnchors)));
@@ -168,6 +172,44 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
         }
     }
     
+    public int home(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        ServerCommandSource source = context.getSource();
+        ServerPlayerEntity player = source.getPlayerOrThrow();
+        Map<String, Anchor> anchors = ((AnchorStorage) player).easyTeleport$getAnchors();
+        AnchorStack stack = ((AnchorStorage) player).easyTeleport$getStack();
+        Anchor anchor = anchors.get("home");
+        if (anchor == null) {
+            sendMessage(player.getCommandSource(), false, Text.literal("Anchor ").formatted(GRAY), Text.literal("home").formatted(RED),
+                    Text.literal(" not set.").formatted(GRAY));
+            return 0;
+        } else {
+            Vec3d position = anchor.position();
+            stack.tpp(new Anchor(player.getPos(), player.getWorld().getRegistryKey()), stackDepth);
+            player.teleport(player.getServer().getWorld(anchor.world()), position.x, position.y, position.z, player.getYaw(), player.getPitch());
+            sendMessage(player.getCommandSource(), true, Text.literal("Teleport to ").formatted(GREEN), Text.literal("home").formatted(YELLOW),
+                    Text.literal(".").formatted(GREEN));
+            return 1;
+        }
+    }
+    
+    public int setHome(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        ServerCommandSource source = context.getSource();
+        ServerPlayerEntity player = source.getPlayerOrThrow();
+        Map<String, Anchor> anchors = ((AnchorStorage) player).easyTeleport$getAnchors();
+        if (anchors.size() < anchorLimit) {
+            Vec3d position = player.getPos();
+            Anchor anchor = new Anchor(position, player.getWorld().getRegistryKey());
+            anchors.put("home", anchor);
+            sendMessage(player.getCommandSource(), true, Text.literal("Anchor ").formatted(GREEN), Text.literal("home").formatted(YELLOW),
+                    Text.literal(" set at ").formatted(GREEN), Text.literal(toString(position)).formatted(GRAY),
+                    Text.literal(" successfully.").formatted(GREEN));
+            return 1;
+        } else {
+            sendMessage(player.getCommandSource(), false, Text.literal("Anchor count limit exceeded.").formatted(RED));
+            return 0;
+        }
+    }
+    
     public int teleport(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         ServerCommandSource source = context.getSource();
         ServerPlayerEntity player = source.getPlayerOrThrow();
@@ -176,15 +218,15 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
         String anchorName = StringArgumentType.getString(context, "anchor-name");
         Anchor anchor = anchors.get(anchorName);
         if (anchor == null) {
-            sendMessage(source, false, Text.literal("Anchor ").formatted(GRAY), Text.literal(anchorName).formatted(RED),
+            sendMessage(player.getCommandSource(), false, Text.literal("Anchor ").formatted(GRAY), Text.literal(anchorName).formatted(RED),
                     Text.literal(" not set.").formatted(GRAY));
             return 0;
         } else {
             Vec3d position = anchor.position();
             stack.tpp(new Anchor(player.getPos(), player.getWorld().getRegistryKey()), stackDepth);
             player.teleport(player.getServer().getWorld(anchor.world()), position.x, position.y, position.z, player.getYaw(), player.getPitch());
-            sendMessage(source, true, Text.literal("Teleport to ").formatted(GREEN), Text.literal(anchorName).formatted(YELLOW),
-                    Text.literal(" successfully.").formatted(GREEN));
+            sendMessage(player.getCommandSource(), true, Text.literal("Teleport to ").formatted(GREEN), Text.literal(anchorName).formatted(YELLOW),
+                    Text.literal(".").formatted(GREEN));
             return 1;
         }
     }
@@ -195,12 +237,13 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
         AnchorStack stack = ((AnchorStorage) player).easyTeleport$getStack();
         Anchor anchor = stack.tpb();
         if (anchor == null) {
-            sendMessage(source, false, Text.literal("Cannot tpb anymore.").formatted(GRAY));
+            sendMessage(player.getCommandSource(), false, Text.literal("Cannot tpb anymore.").formatted(GRAY));
             return 0;
         } else {
             Vec3d position = anchor.position();
             player.teleport(player.getServer().getWorld(anchor.world()), position.x, position.y, position.z, player.getYaw(), player.getPitch());
-            sendMessage(source, true, Text.literal("Teleport to ").formatted(GREEN), Text.literal(toString(position)).formatted(GRAY));
+            sendMessage(player.getCommandSource(), true, Text.literal("Teleport to ").formatted(GREEN), Text.literal(toString(position)).formatted(GRAY),
+                    Text.literal(".").formatted(GREEN));
             return 1;
         }
     }
@@ -211,12 +254,13 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
         AnchorStack stack = ((AnchorStorage) player).easyTeleport$getStack();
         Anchor anchor = stack.tpp();
         if (anchor == null) {
-            sendMessage(source, false, Text.literal("Cannot tpp anymore.").formatted(GRAY));
+            sendMessage(player.getCommandSource(), false, Text.literal("Cannot tpp anymore.").formatted(GRAY));
             return 0;
         } else {
             Vec3d position = anchor.position();
             player.teleport(player.getServer().getWorld(anchor.world()), position.x, position.y, position.z, player.getYaw(), player.getPitch());
-            sendMessage(source, true, Text.literal("Teleport to ").formatted(GREEN), Text.literal(toString(position)).formatted(GRAY));
+            sendMessage(player.getCommandSource(), true, Text.literal("Teleport to ").formatted(GREEN), Text.literal(toString(position)).formatted(GRAY),
+                    Text.literal(".").formatted(GREEN));
             return 1;
         }
     }
@@ -298,15 +342,16 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
         ServerPlayerEntity player = source.getPlayerOrThrow();
         Map<String, Anchor> anchors = ((AnchorStorage) player).easyTeleport$getAnchors();
         if (anchors.isEmpty()) {
-            sendMessage(source, true, Text.literal("No anchors set.").formatted(GRAY));
+            sendMessage(player.getCommandSource(), true, Text.literal("No anchors set.").formatted(GRAY));
             return 0;
         } else {
-            sendMessage(source, true, Text.literal("Anchors set by ").formatted(GREEN), ((MutableText) player.getName()).formatted(GOLD));
+            sendMessage(player.getCommandSource(), true, Text.literal("Anchors set by ").formatted(GREEN), ((MutableText) player.getName()).formatted(GOLD),
+                    Text.literal(":").formatted(GREEN));
             ArrayList<String> anchorNames = new ArrayList<>(anchors.keySet());
             anchorNames.sort(String::compareToIgnoreCase);
             for (String anchorName : anchorNames) {
-                sendMessage(source, true, Text.literal(" -").formatted(GRAY), Text.literal(anchorName).formatted(YELLOW), Text.literal(" at ").formatted(GRAY),
-                        Text.literal(toString(anchors.get(anchorName).position())).formatted(GRAY));
+                sendMessage(player.getCommandSource(), true, Text.literal(" -").formatted(GRAY), Text.literal(anchorName).formatted(YELLOW),
+                        Text.literal(" at ").formatted(GRAY), Text.literal(toString(anchors.get(anchorName).position())).formatted(GRAY));
             }
             return 1;
         }
@@ -317,11 +362,11 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
         ServerPlayerEntity player = source.getPlayerOrThrow();
         Map<String, Anchor> anchors = ((AnchorStorage) player).easyTeleport$getAnchors();
         if (anchors.isEmpty()) {
-            sendMessage(source, true, Text.literal("No anchors set.").formatted(GRAY));
+            sendMessage(player.getCommandSource(), true, Text.literal("No anchors set.").formatted(GRAY));
             return 0;
         } else {
             anchors.clear();
-            sendMessage(source, true, Text.literal("Anchors cleared.").formatted(GREEN));
+            sendMessage(player.getCommandSource(), true, Text.literal("Anchors cleared.").formatted(GREEN));
             return 1;
         }
     }
@@ -335,11 +380,12 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
             String anchorName = StringArgumentType.getString(context, "anchor-name");
             Anchor anchor = new Anchor(position, player.getWorld().getRegistryKey());
             anchors.put(anchorName, anchor);
-            sendMessage(source, true, Text.literal("Anchor ").formatted(GREEN), Text.literal(anchorName).formatted(YELLOW),
-                    Text.literal(" set at ").formatted(GREEN), Text.literal(toString(position)).formatted(GRAY));
+            sendMessage(player.getCommandSource(), true, Text.literal("Anchor ").formatted(GREEN), Text.literal(anchorName).formatted(YELLOW),
+                    Text.literal(" set at ").formatted(GREEN), Text.literal(toString(position)).formatted(GRAY),
+                    Text.literal(" successfully.").formatted(GREEN));
             return 1;
         } else {
-            sendMessage(source, false, Text.literal("Anchor count limit exceeded.").formatted(RED));
+            sendMessage(player.getCommandSource(), false, Text.literal("Anchor count limit exceeded.").formatted(RED));
             return 0;
         }
     }
@@ -350,11 +396,11 @@ public class EasyTeleportMod implements ModInitializer, CommandRegistrationCallb
         Map<String, Anchor> anchors = ((AnchorStorage) player).easyTeleport$getAnchors();
         String anchorName = StringArgumentType.getString(context, "anchor-name");
         if (anchors.keySet().remove(anchorName)) {
-            sendMessage(source, true, Text.literal("Anchor ").formatted(GREEN), Text.literal(anchorName).formatted(YELLOW),
+            sendMessage(player.getCommandSource(), true, Text.literal("Anchor ").formatted(GREEN), Text.literal(anchorName).formatted(YELLOW),
                     Text.literal(" removed.").formatted(GREEN));
             return 1;
         } else {
-            sendMessage(source, false, Text.literal("Anchor ").formatted(GRAY), Text.literal(anchorName).formatted(RED),
+            sendMessage(player.getCommandSource(), false, Text.literal("Anchor ").formatted(GRAY), Text.literal(anchorName).formatted(RED),
                     Text.literal(" not set.").formatted(GRAY));
             return 0;
         }

@@ -1,6 +1,6 @@
 # EasyTeleport
 
-A mod adding command `/tpb`, `/tpp`, `/tpa`, `/tpaccept`, `/anchor` and `/config`.
+A mod adding command `/tpb`, `/tpp`, `/tpa`, `/tpaccept`, `/home`, `/sethome`, `/anchor` and `/config`.
 
 Made for servers! Clients don't have to install EasyTeleport to connect to the server.
 
@@ -16,6 +16,10 @@ Made for servers! Clients don't have to install EasyTeleport to connect to the s
 command `/tpb` can also take effect.
 
 `/tpaccept` Accept all requests that have not timed out.
+
+`/home` Teleport you to home.
+
+`/sethome` Set home at your current position.
 
 `/anchor list` List all your anchors.
 
