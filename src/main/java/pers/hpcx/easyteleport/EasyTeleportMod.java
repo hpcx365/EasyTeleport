@@ -382,6 +382,6 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
         requestTimeout = DEFAULT_REQUEST_TIMEOUT;
         String[] keys = {STACK_DEPTH.getKey(), ANCHOR_LIMIT.getKey(), REQUEST_TIMEOUT.getKey()};
         String[] values = {Integer.toString(stackDepth), Integer.toString(anchorLimit), Integer.toString(requestTimeout)};
-        return storeProperties(context.getSource(), keys, values);
+        return EasyTeleportUtils.restoreDefault(context.getSource(), keys, values);
     }
 }

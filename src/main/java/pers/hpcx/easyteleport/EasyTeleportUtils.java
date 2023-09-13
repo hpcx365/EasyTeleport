@@ -115,32 +115,17 @@ public final class EasyTeleportUtils {
         return 1;
     }
     
-    public static int storeProperties(ServerCommandSource source, String[] keys, String[] values) {
-        int n = keys.length;
-        for (int i = 0; i < n; i++) {
+    public static int restoreDefault(ServerCommandSource source, String[] keys, String[] values) {
+        for (int i = 0; i < keys.length; i++) {
             sendMessage(source, true, Text.literal(keys[i]).formatted(LIGHT_PURPLE), Text.literal(" set to ").formatted(GREEN),
                     Text.literal(values[i]).formatted(GOLD), Text.literal(" successfully.").formatted(GREEN));
         }
-        Properties properties = new Properties();
-        
-        try (InputStream in = Files.newInputStream(CONFIG_PATH)) {
-            properties.load(in);
-        } catch (IOException e) {
-            sendMessage(source, false, Text.literal("Failed to read config file: ").formatted(GRAY), Text.literal(e.getMessage()).formatted(RED));
-            return 0;
-        }
-        
-        for (int i = 0; i < n; i++) {
-            properties.setProperty(keys[i], values[i]);
-        }
-        
-        try (OutputStream out = Files.newOutputStream(CONFIG_PATH)) {
-            properties.store(out, CONFIG_COMMENTS);
+        try {
+            Files.deleteIfExists(CONFIG_PATH);
+            return 1;
         } catch (IOException e) {
             sendMessage(source, false, Text.literal("Failed to write config file: ").formatted(GRAY), Text.literal(e.getMessage()).formatted(RED));
             return 0;
         }
-        
-        return 1;
     }
 }
