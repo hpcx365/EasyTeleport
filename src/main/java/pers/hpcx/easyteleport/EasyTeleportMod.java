@@ -293,7 +293,7 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
             sendMessage(player.getCommandSource(), false, Text.literal("Anchor count limit exceeded.").formatted(RED));
             return 0;
         }
-        anchors.put("home", new TeleportAnchor("home", player.getPos(), player.getServerWorld().getRegistryKey()));
+        anchors.put("home", new TeleportAnchor(player.getPos(), player.getServerWorld().getRegistryKey()));
         sendMessage(player.getCommandSource(), true, Text.literal("Anchor ").formatted(GREEN), Text.literal("home").formatted(YELLOW),
                 Text.literal(" set at ").formatted(GREEN), Text.literal(format(player.getPos())).formatted(GRAY),
                 Text.literal(" successfully.").formatted(GREEN));
@@ -338,7 +338,7 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
             return 0;
         }
         String name = StringArgumentType.getString(context, "anchor-name");
-        anchors.put(name, new TeleportAnchor(name, player.getPos(), player.getServerWorld().getRegistryKey()));
+        anchors.put(name, new TeleportAnchor(player.getPos(), player.getServerWorld().getRegistryKey()));
         sendMessage(player.getCommandSource(), true, Text.literal("Anchor ").formatted(GREEN), Text.literal(name).formatted(YELLOW),
                 Text.literal(" set at ").formatted(GREEN), Text.literal(format(player.getPos())).formatted(GRAY),
                 Text.literal(" successfully.").formatted(GREEN));
