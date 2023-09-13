@@ -44,6 +44,7 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
     public int requestTimeout = DEFAULT_REQUEST_TIMEOUT;
     
     public final Map<UUID, List<TeleportRequest>> requests = new HashMap<>();
+    public final Map<UUID, TeleportRequest> requests2 = new HashMap<>();
     
     @Override
     public void onInitialize() {
@@ -103,21 +104,30 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
     
     @Override
     public void onEndTick(MinecraftServer server) {
-        if (requests.isEmpty()) {
-            return;
+        if (!requests.isEmpty()) {
+            for (UUID targetID : requests.keySet()) {
+                List<TeleportRequest> requestList = requests.get(targetID);
+                Iterator<TeleportRequest> iterator = requestList.iterator();
+                while (iterator.hasNext()) {
+                    TeleportRequest request = iterator.next();
+                    if (--request.keepAliveTicks <= 0) {
+                        iterator.remove();
+                        notifyRequestTimedOut(server, request.sourcePlayerID, request.targetPlayerID);
+                    }
+                }
+                if (requestList.isEmpty()) {
+                    requests.keySet().remove(targetID);
+                }
+            }
         }
-        for (UUID targetID : requests.keySet()) {
-            List<TeleportRequest> requestList = requests.get(targetID);
-            Iterator<TeleportRequest> iterator = requestList.iterator();
+        if (!requests2.isEmpty()) {
+            Iterator<UUID> iterator = requests2.keySet().iterator();
             while (iterator.hasNext()) {
-                TeleportRequest request = iterator.next();
+                TeleportRequest request = requests2.get(iterator.next());
                 if (--request.keepAliveTicks <= 0) {
                     iterator.remove();
                     notifyRequestTimedOut(server, request.sourcePlayerID, request.targetPlayerID);
                 }
-            }
-            if (requestList.isEmpty()) {
-                requests.keySet().remove(targetID);
             }
         }
     }
@@ -136,6 +146,9 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
         
         dispatcher.register(
                 literal("tpa").requires(isPlayer).then(argument("target-player", GameProfileArgumentType.gameProfile()).executes(this::teleportRequest)));
+        
+        dispatcher.register(
+                literal("tphere").requires(isPlayer).then(argument("source-player", GameProfileArgumentType.gameProfile()).executes(this::teleportHere)));
         
         dispatcher.register(literal("tpaccept").requires(isPlayer).executes(this::teleportAcceptAll));
         
@@ -225,6 +238,31 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
         return 1;
     }
     
+    public int teleportHere(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        ServerPlayerEntity targetPlayer = context.getSource().getPlayerOrThrow();
+        Collection<GameProfile> profiles = GameProfileArgumentType.getProfileArgument(context, "source-player");
+        UUID targetID = targetPlayer.getUuid();
+        UUID sourceID = selectPlayerID(targetPlayer, profiles);
+        ServerPlayerEntity sourcePlayer = targetPlayer.getServer().getPlayerManager().getPlayer(sourceID);
+        if (sourcePlayer == null) {
+            playerNotFound(targetPlayer);
+            return 0;
+        }
+        TeleportRequest request = requests2.get(sourceID);
+        if (request != null) {
+            sendMessage(targetPlayer.getCommandSource(), false, Text.literal(sourcePlayer.getName().getString()).formatted(GOLD),
+                    Text.literal(" has already received a request.").formatted(GRAY));
+            return 0;
+        }
+        requests2.put(sourceID, new TeleportRequest(sourceID, targetID, requestTimeout / 50));
+        sendMessage(sourcePlayer.getCommandSource(), true, Text.literal(targetPlayer.getName().getString()).formatted(GOLD),
+                Text.literal(" has requested to teleport you to there. Type ").formatted(GREEN), Text.literal("/tpaccept").formatted(YELLOW),
+                Text.literal(" to accept.").formatted(GREEN));
+        sendMessage(targetPlayer.getCommandSource(), true, Text.literal("Requested to teleport ").formatted(GREEN),
+                Text.literal(sourcePlayer.getName().getString()).formatted(GOLD), Text.literal(" to you.").formatted(GREEN));
+        return 1;
+    }
+    
     public int teleportAccept(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         ServerPlayerEntity targetPlayer = context.getSource().getPlayerOrThrow();
         Collection<GameProfile> profiles = GameProfileArgumentType.getProfileArgument(context, "source-player");
@@ -259,25 +297,33 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
     }
     
     public int teleportAcceptAll(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-        ServerPlayerEntity targetPlayer = context.getSource().getPlayerOrThrow();
-        UUID targetID = targetPlayer.getUuid();
-        List<TeleportRequest> requestList = requests.get(targetID);
-        if (requestList == null || requestList.isEmpty()) {
-            noRequests(targetPlayer);
-            return 0;
-        }
-        for (TeleportRequest request : requestList) {
-            ServerPlayerEntity sourcePlayer = targetPlayer.getServer().getPlayerManager().getPlayer(request.sourcePlayerID);
-            if (sourcePlayer == null) {
-                playerNotFound(targetPlayer);
-                continue;
+        ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
+        UUID playerID = player.getUuid();
+        List<TeleportRequest> requestList = requests.get(playerID);
+        TeleportRequest request2 = requests2.get(playerID);
+        if (requestList != null && !requestList.isEmpty()) {
+            for (TeleportRequest request : requestList) {
+                ServerPlayerEntity sourcePlayer = player.getServer().getPlayerManager().getPlayer(request.sourcePlayerID);
+                if (sourcePlayer == null) {
+                    playerNotFound(player);
+                } else {
+                    TeleportStack stack = ((TeleportStorage) sourcePlayer).easyTeleport$getStack();
+                    stack.tpp(sourcePlayer, player, stackDepth);
+                }
             }
-            TeleportStack stack = ((TeleportStorage) sourcePlayer).easyTeleport$getStack();
-            stack.tpp(sourcePlayer, targetPlayer, stackDepth);
+            requestList.clear();
+            requests.keySet().remove(playerID);
         }
-        requestList.clear();
-        requests.keySet().remove(targetID);
-        return 1;
+        if (request2 != null) {
+            ServerPlayerEntity targetPlayer = player.getServer().getPlayerManager().getPlayer(request2.targetPlayerID);
+            if (targetPlayer == null) {
+                playerNotFound(player);
+            } else {
+                TeleportStack stack = ((TeleportStorage) player).easyTeleport$getStack();
+                stack.tpp(player, targetPlayer, stackDepth);
+            }
+        }
+        return requestList != null && !requestList.isEmpty() || request2 != null ? 1 : 0;
     }
     
     public int home(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {

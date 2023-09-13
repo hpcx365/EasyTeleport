@@ -1,23 +1,24 @@
 # EasyTeleport
 
-A mod adding command `/tpb`, `/tpp`, `/tpa`, `/tpaccept`, `/home`, `/sethome`, `/anchor` and `/config`.
+A mod adding command `/tpb`, `/tpp`, `/tpa`, `/tphere`, `/tpaccept`, `/home`, `/sethome`, `/anchor` and `/config`.
 
 Made for servers! Clients don't have to install EasyTeleport to connect to the server.
 
 ## Usage
 
-`/tpb` Teleport to your previous position, including your position of death.
+`/tpb` Teleport you to your previous position, including where you died.
 
 `/tpp` Revoke the command `/tpb`.
 
-`/tpp <anchor-name>` Teleport you to a specific anchor.
+`/tpp <anchor-name>` Teleport you to an anchor.
 
-`/tpa <target-player>` Request to teleport to the target player, if the request is accepted, the
-command `/tpb` can also take effect.
+`/tpa <target-player>` Request to teleport you to a player.
+
+`/tphere <source-player>` Request to teleport a player to you.
 
 `/tpaccept` Accept all requests that have not timed out.
 
-`/tpaccept <source-player>` Accept the request from a specific player.
+`/tpaccept <source-player>` Accept the request from a player.
 
 `/home` Teleport you to home.
 
@@ -29,7 +30,7 @@ command `/tpb` can also take effect.
 
 `/anchor set <anchor-name>` Set an anchor at your current position.
 
-`/anchor remove <anchor-name>` Remove a specific anchor.
+`/anchor remove <anchor-name>` Remove an anchor.
 
 `/config depth <stack-depth>` Set the teleport stack depth.
 
@@ -39,7 +40,7 @@ command `/tpb` can also take effect.
 
 `/config default` Restore all default values.
 
-`stack-depth`, `anchor-limit` and `request-timeout` can also be set in **_easy-teleport.properties_**.
+`stack-depth`, `anchor-limit` and `request-timeout` can be set in **_easy-teleport.properties_** as well.
 
 ## Github
 
