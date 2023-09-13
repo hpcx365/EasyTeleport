@@ -23,7 +23,7 @@ public class TeleportStack {
         while (tpbAnchors.size() >= depth) {
             tpbAnchors.removeLast();
         }
-        tpbAnchors.addFirst(new TeleportAnchor("death", player.getPos(), player.getServerWorld().getRegistryKey()));
+        tpbAnchors.addFirst(new TeleportAnchor(player.getPos(), player.getServerWorld().getRegistryKey()));
         tppAnchors.clear();
     }
     
@@ -35,7 +35,7 @@ public class TeleportStack {
                     literal(" not found.").formatted(GRAY));
             return 0;
         }
-        tpp(player, anchor, false, depth);
+        tpp(player, anchor, anchorName, false, depth);
         return 1;
     }
     
@@ -43,7 +43,7 @@ public class TeleportStack {
         while (tpbAnchors.size() >= depth) {
             tpbAnchors.removeLast();
         }
-        tpbAnchors.addFirst(new TeleportAnchor("request", player.getPos(), player.getServerWorld().getRegistryKey()));
+        tpbAnchors.addFirst(new TeleportAnchor(player.getPos(), player.getServerWorld().getRegistryKey()));
         Vec3d position = target.getPos();
         ServerWorld world = target.getServerWorld();
         player.teleport(world, position.x, position.y, position.z, player.getYaw(), player.getPitch());
@@ -57,7 +57,7 @@ public class TeleportStack {
             sendMessage(player.getCommandSource(), false, literal("Cannot tpp anymore.").formatted(GRAY));
             return 0;
         } else {
-            tpp(player, tppAnchors.removeFirst(), true, depth);
+            tpp(player, tppAnchors.removeFirst(), null, true, depth);
             return 1;
         }
     }
@@ -67,47 +67,47 @@ public class TeleportStack {
             sendMessage(player.getCommandSource(), false, literal("Cannot tpb anymore.").formatted(GRAY));
             return 0;
         } else {
-            tpb(player, tpbAnchors.removeFirst(), true, depth);
+            tpb(player, tpbAnchors.removeFirst(), null, true, depth);
             return 1;
         }
     }
     
-    public void tpp(ServerPlayerEntity player, TeleportAnchor anchor, boolean tempAnchor, int depth) {
+    public void tpp(ServerPlayerEntity player, TeleportAnchor anchor, String name, boolean temp, int depth) {
         while (tpbAnchors.size() >= depth) {
             tpbAnchors.removeLast();
         }
-        tpbAnchors.addFirst(new TeleportAnchor("temp", player.getPos(), player.getServerWorld().getRegistryKey()));
-        if (!tempAnchor) {
+        tpbAnchors.addFirst(new TeleportAnchor(player.getPos(), player.getServerWorld().getRegistryKey()));
+        if (!temp) {
             tppAnchors.clear();
         }
         Vec3d position = anchor.position();
         ServerWorld world = player.getServer().getWorld(anchor.world());
         player.teleport(world, position.x, position.y, position.z, player.getYaw(), player.getPitch());
-        if (tempAnchor) {
-            sendMessage(player.getCommandSource(), true, literal("Teleport to ").formatted(GREEN), literal(format(anchor.position())).formatted(YELLOW),
+        if (temp) {
+            sendMessage(player.getCommandSource(), true, literal("Teleport to ").formatted(GREEN), literal(format(anchor.position())).formatted(GRAY),
                     literal(".").formatted(GREEN));
         } else {
-            sendMessage(player.getCommandSource(), true, literal("Teleport to ").formatted(GREEN), literal(anchor.name()).formatted(YELLOW),
+            sendMessage(player.getCommandSource(), true, literal("Teleport to ").formatted(GREEN), literal(name).formatted(YELLOW),
                     literal(" successfully.").formatted(GREEN));
         }
     }
     
-    public void tpb(ServerPlayerEntity player, TeleportAnchor anchor, boolean tempAnchor, int depth) {
+    public void tpb(ServerPlayerEntity player, TeleportAnchor anchor, String name, boolean temp, int depth) {
         while (tppAnchors.size() >= depth) {
             tppAnchors.removeLast();
         }
-        tppAnchors.addFirst(new TeleportAnchor("temp", player.getPos(), player.getServerWorld().getRegistryKey()));
-        if (!tempAnchor) {
+        tppAnchors.addFirst(new TeleportAnchor(player.getPos(), player.getServerWorld().getRegistryKey()));
+        if (!temp) {
             tpbAnchors.clear();
         }
         Vec3d position = anchor.position();
         ServerWorld world = player.getServer().getWorld(anchor.world());
         player.teleport(world, position.x, position.y, position.z, player.getYaw(), player.getPitch());
-        if (tempAnchor) {
-            sendMessage(player.getCommandSource(), true, literal("Teleport to ").formatted(GREEN), literal(format(anchor.position())).formatted(YELLOW),
+        if (temp) {
+            sendMessage(player.getCommandSource(), true, literal("Teleport to ").formatted(GREEN), literal(format(anchor.position())).formatted(GRAY),
                     literal(".").formatted(GREEN));
         } else {
-            sendMessage(player.getCommandSource(), true, literal("Teleport to ").formatted(GREEN), literal(anchor.name()).formatted(YELLOW),
+            sendMessage(player.getCommandSource(), true, literal("Teleport to ").formatted(GREEN), literal(name).formatted(YELLOW),
                     literal(" successfully.").formatted(GREEN));
         }
     }
