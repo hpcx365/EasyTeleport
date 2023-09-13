@@ -2,15 +2,14 @@ package pers.hpcx.easyteleport.mixin;
 
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.network.ServerPlayerEntity;
-import org.jetbrains.annotations.NotNull;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import pers.hpcx.easyteleport.Anchor;
-import pers.hpcx.easyteleport.AnchorStack;
-import pers.hpcx.easyteleport.AnchorStorage;
+import pers.hpcx.easyteleport.TeleportAnchor;
+import pers.hpcx.easyteleport.TeleportStack;
+import pers.hpcx.easyteleport.TeleportStorage;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -18,20 +17,20 @@ import java.util.Map;
 import static pers.hpcx.easyteleport.EasyTeleportUtils.MOD_ID;
 
 @Mixin(ServerPlayerEntity.class)
-public class ServerPlayerMixin implements AnchorStorage {
+public class ServerPlayerMixin implements TeleportStorage {
     
     @Unique
-    private AnchorStack stack = new AnchorStack();
+    private TeleportStack stack = new TeleportStack();
     @Unique
-    private Map<String, Anchor> anchors = new HashMap<>();
+    private Map<String, TeleportAnchor> anchors = new HashMap<>();
     
     @Override
-    public @NotNull AnchorStack easyTeleport$getStack() {
+    public TeleportStack easyTeleport$getStack() {
         return stack;
     }
     
     @Override
-    public @NotNull Map<String, Anchor> easyTeleport$getAnchors() {
+    public Map<String, TeleportAnchor> easyTeleport$getAnchors() {
         return anchors;
     }
     
@@ -48,12 +47,12 @@ public class ServerPlayerMixin implements AnchorStorage {
         }
         if (modData.contains("stack")) {
             NbtCompound stackData = modData.getCompound("stack");
-            stack = AnchorStack.fromCompound(stackData);
+            stack = TeleportStack.fromCompound(stackData);
         }
         if (modData.contains("anchors")) {
             NbtCompound anchorData = modData.getCompound("anchors");
             for (String anchorName : anchorData.getKeys()) {
-                anchors.put(anchorName, Anchor.fromCompound(anchorData.getCompound(anchorName)));
+                anchors.put(anchorName, TeleportAnchor.fromCompound(anchorData.getCompound(anchorName)));
             }
         }
     }

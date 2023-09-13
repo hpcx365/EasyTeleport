@@ -18,9 +18,7 @@ import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
-import net.minecraft.util.math.Vec3d;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,7 +29,7 @@ import java.util.function.Predicate;
 
 import static net.minecraft.server.command.CommandManager.*;
 import static net.minecraft.util.Formatting.*;
-import static pers.hpcx.easyteleport.EasyTeleportConfigEnum.*;
+import static pers.hpcx.easyteleport.EasyTeleportConfig.*;
 import static pers.hpcx.easyteleport.EasyTeleportUtils.*;
 
 public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.ServerStarting, ServerTickEvents.EndTick, ServerLivingEntityEvents.AfterDeath,
@@ -45,7 +43,7 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
     public int anchorLimit = DEFAULT_ANCHOR_LIMIT;
     public int requestTimeout = DEFAULT_REQUEST_TIMEOUT;
     
-    public final Map<UUID, List<Request>> requests = new HashMap<>();
+    public final Map<UUID, List<TeleportRequest>> requests = new HashMap<>();
     
     @Override
     public void onInitialize() {
@@ -109,13 +107,13 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
             return;
         }
         for (UUID targetID : requests.keySet()) {
-            List<Request> requestList = requests.get(targetID);
-            Iterator<Request> iterator = requestList.iterator();
+            List<TeleportRequest> requestList = requests.get(targetID);
+            Iterator<TeleportRequest> iterator = requestList.iterator();
             while (iterator.hasNext()) {
-                Request request = iterator.next();
+                TeleportRequest request = iterator.next();
                 if (--request.keepAliveTicks <= 0) {
                     iterator.remove();
-                    notifyRequestTimedOut(server, request.sourceID, request.targetID);
+                    notifyRequestTimedOut(server, request.sourcePlayerID, request.targetPlayerID);
                 }
             }
             if (requestList.isEmpty()) {
@@ -173,165 +171,109 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
     @Override
     public void afterDeath(LivingEntity entity, DamageSource damageSource) {
         if (entity instanceof ServerPlayerEntity player) {
-            AnchorStack stack = ((AnchorStorage) player).easyTeleport$getStack();
-            stack.tpp(new Anchor(player.getPos(), player.getWorld().getRegistryKey()), stackDepth);
+            TeleportStack stack = ((TeleportStorage) player).easyTeleport$getStack();
+            stack.afterDeath(player, stackDepth);
         }
     }
     
     public int teleport(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-        ServerCommandSource source = context.getSource();
-        ServerPlayerEntity player = source.getPlayerOrThrow();
-        Map<String, Anchor> anchors = ((AnchorStorage) player).easyTeleport$getAnchors();
-        AnchorStack stack = ((AnchorStorage) player).easyTeleport$getStack();
-        String anchorName = StringArgumentType.getString(context, "anchor-name");
-        Anchor anchor = anchors.get(anchorName);
-        if (anchor == null) {
-            sendMessage(player.getCommandSource(), false, Text.literal("Anchor ").formatted(GRAY), Text.literal(anchorName).formatted(RED),
-                    Text.literal(" not set.").formatted(GRAY));
-            return 0;
-        } else {
-            Vec3d position = anchor.position();
-            stack.tpp(new Anchor(player.getPos(), player.getWorld().getRegistryKey()), stackDepth);
-            player.teleport(player.getServer().getWorld(anchor.world()), position.x, position.y, position.z, player.getYaw(), player.getPitch());
-            sendMessage(player.getCommandSource(), true, Text.literal("Teleport to ").formatted(GREEN), Text.literal(anchorName).formatted(YELLOW),
-                    Text.literal(".").formatted(GREEN));
-            return 1;
-        }
+        ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
+        TeleportStack stack = ((TeleportStorage) player).easyTeleport$getStack();
+        return stack.tpp(player, StringArgumentType.getString(context, "anchor-name"), stackDepth);
     }
     
     public int teleportBack(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-        ServerCommandSource source = context.getSource();
-        ServerPlayerEntity player = source.getPlayerOrThrow();
-        AnchorStack stack = ((AnchorStorage) player).easyTeleport$getStack();
-        Anchor anchor = stack.tpb();
-        if (anchor == null) {
-            sendMessage(player.getCommandSource(), false, Text.literal("Cannot tpb anymore.").formatted(GRAY));
-            return 0;
-        } else {
-            Vec3d position = anchor.position();
-            player.teleport(player.getServer().getWorld(anchor.world()), position.x, position.y, position.z, player.getYaw(), player.getPitch());
-            sendMessage(player.getCommandSource(), true, Text.literal("Teleport to ").formatted(GREEN), Text.literal(format(position)).formatted(GRAY),
-                    Text.literal(".").formatted(GREEN));
-            return 1;
-        }
+        ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
+        TeleportStack stack = ((TeleportStorage) player).easyTeleport$getStack();
+        return stack.tpb(player, stackDepth);
     }
     
     public int teleportReturn(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-        ServerCommandSource source = context.getSource();
-        ServerPlayerEntity player = source.getPlayerOrThrow();
-        AnchorStack stack = ((AnchorStorage) player).easyTeleport$getStack();
-        Anchor anchor = stack.tpp();
-        if (anchor == null) {
-            sendMessage(player.getCommandSource(), false, Text.literal("Cannot tpp anymore.").formatted(GRAY));
-            return 0;
-        } else {
-            Vec3d position = anchor.position();
-            player.teleport(player.getServer().getWorld(anchor.world()), position.x, position.y, position.z, player.getYaw(), player.getPitch());
-            sendMessage(player.getCommandSource(), true, Text.literal("Teleport to ").formatted(GREEN), Text.literal(format(position)).formatted(GRAY),
-                    Text.literal(".").formatted(GREEN));
-            return 1;
-        }
+        ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
+        TeleportStack stack = ((TeleportStorage) player).easyTeleport$getStack();
+        return stack.tpp(player, stackDepth);
     }
     
     public int teleportRequest(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-        ServerCommandSource source = context.getSource();
-        ServerPlayerEntity player = source.getPlayerOrThrow();
+        ServerPlayerEntity sourcePlayer = context.getSource().getPlayerOrThrow();
         Collection<GameProfile> profiles = GameProfileArgumentType.getProfileArgument(context, "target-player");
-        UUID sourceID = player.getUuid();
-        UUID targetID = selectPlayer(player.getCommandSource(), profiles);
-        if (sourceID.equals(targetID)) {
-            sendMessage(player.getCommandSource(), false, Text.literal("Cannot teleport to yourself.").formatted(RED));
+        UUID sourceID = sourcePlayer.getUuid();
+        UUID targetID = selectPlayerID(sourcePlayer, profiles);
+        ServerPlayerEntity targetPlayer = sourcePlayer.getServer().getPlayerManager().getPlayer(targetID);
+        if (targetPlayer == null) {
+            playerNotFound(sourcePlayer);
             return 0;
         }
-        ServerPlayerEntity target = player.getServer().getPlayerManager().getPlayer(targetID);
-        if (target == null) {
-            playerNotFound(player.getCommandSource());
-            return 0;
-        }
-        List<Request> requestList = requests.get(targetID);
+        List<TeleportRequest> requestList = requests.get(targetID);
         if (requestList == null) {
             requests.put(targetID, requestList = new ArrayList<>());
         } else {
-            for (Request request : requestList) {
-                if (!request.sourceID.equals(sourceID)) {
-                    continue;
+            for (TeleportRequest request : requestList) {
+                if (request.sourcePlayerID.equals(sourceID)) {
+                    sendMessage(sourcePlayer.getCommandSource(), false, Text.literal("You have requested to teleport to ").formatted(GRAY),
+                            Text.literal(targetPlayer.getName().getString()).formatted(GOLD), Text.literal(".").formatted(GRAY));
+                    return 0;
                 }
-                sendMessage(player.getCommandSource(), false, Text.literal("You have requested to teleport to ").formatted(GRAY),
-                        Text.literal(target.getName().getString()).formatted(GOLD), Text.literal(".").formatted(GRAY));
-                return 0;
             }
         }
-        requestList.add(new Request(sourceID, targetID, requestTimeout / 50));
-        sendMessage(player.getCommandSource(), true, Text.literal("Requested to teleport to ").formatted(GREEN),
-                Text.literal(target.getName().getString()).formatted(GOLD), Text.literal(".").formatted(GREEN));
-        sendMessage(target.getCommandSource(), true, Text.literal(player.getName().getString()).formatted(GOLD),
+        requestList.add(new TeleportRequest(sourceID, targetID, requestTimeout / 50));
+        sendMessage(sourcePlayer.getCommandSource(), true, Text.literal("Requested to teleport to ").formatted(GREEN),
+                Text.literal(targetPlayer.getName().getString()).formatted(GOLD), Text.literal(".").formatted(GREEN));
+        sendMessage(targetPlayer.getCommandSource(), true, Text.literal(sourcePlayer.getName().getString()).formatted(GOLD),
                 Text.literal(" has requested to teleport to you. Type ").formatted(GREEN), Text.literal("/tpaccept").formatted(YELLOW),
                 Text.literal(" to accept.").formatted(GREEN));
         return 1;
     }
     
     public int teleportAccept(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-        ServerCommandSource source = context.getSource();
-        ServerPlayerEntity targetPlayer = source.getPlayerOrThrow();
+        ServerPlayerEntity targetPlayer = context.getSource().getPlayerOrThrow();
         Collection<GameProfile> profiles = GameProfileArgumentType.getProfileArgument(context, "source-player");
-        UUID sourceID = selectPlayer(targetPlayer.getCommandSource(), profiles);
+        UUID sourceID = selectPlayerID(targetPlayer, profiles);
         UUID targetID = targetPlayer.getUuid();
-        List<Request> requestList = requests.get(targetID);
+        List<TeleportRequest> requestList = requests.get(targetID);
         if (requestList == null || requestList.isEmpty()) {
-            noRequests(targetPlayer.getCommandSource());
+            noRequests(targetPlayer);
             return 0;
         }
-        Iterator<Request> iterator = requestList.iterator();
+        Iterator<TeleportRequest> iterator = requestList.iterator();
         while (iterator.hasNext()) {
-            Request request = iterator.next();
-            if (!request.sourceID.equals(sourceID)) {
+            TeleportRequest request = iterator.next();
+            if (!request.sourcePlayerID.equals(sourceID)) {
                 continue;
             }
             ServerPlayerEntity sourcePlayer = targetPlayer.getServer().getPlayerManager().getPlayer(sourceID);
             if (sourcePlayer == null) {
-                playerNotFound(targetPlayer.getCommandSource());
+                playerNotFound(targetPlayer);
                 return 0;
             }
-            Vec3d position = targetPlayer.getPos();
-            AnchorStack stack = ((AnchorStorage) sourcePlayer).easyTeleport$getStack();
-            stack.tpp(new Anchor(sourcePlayer.getPos(), sourcePlayer.getWorld().getRegistryKey()), stackDepth);
-            sourcePlayer.teleport(targetPlayer.getServerWorld(), position.x, position.y, position.z, sourcePlayer.getYaw(), sourcePlayer.getPitch());
-            sendMessage(sourcePlayer.getCommandSource(), true, Text.literal("Teleport to ").formatted(GREEN),
-                    Text.literal(targetPlayer.getName().getString()).formatted(GOLD), Text.literal(" successfully.").formatted(GREEN));
-            sendMessage(targetPlayer.getCommandSource(), true, Text.literal(sourcePlayer.getName().getString()).formatted(GOLD),
-                    Text.literal(" is teleported to you.").formatted(GREEN));
+            TeleportStack stack = ((TeleportStorage) sourcePlayer).easyTeleport$getStack();
+            stack.tpp(sourcePlayer, targetPlayer, stackDepth);
             iterator.remove();
             if (requestList.isEmpty()) {
                 requests.keySet().remove(targetID);
             }
             return 1;
         }
-        playerNotFound(targetPlayer.getCommandSource());
+        playerNotFound(targetPlayer);
         return 0;
     }
     
     public int teleportAcceptAll(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-        ServerCommandSource source = context.getSource();
-        ServerPlayerEntity targetPlayer = source.getPlayerOrThrow();
+        ServerPlayerEntity targetPlayer = context.getSource().getPlayerOrThrow();
         UUID targetID = targetPlayer.getUuid();
-        List<Request> requestList = requests.get(targetID);
+        List<TeleportRequest> requestList = requests.get(targetID);
         if (requestList == null || requestList.isEmpty()) {
-            noRequests(targetPlayer.getCommandSource());
+            noRequests(targetPlayer);
             return 0;
         }
-        for (Request request : requestList) {
-            ServerPlayerEntity sourcePlayer = targetPlayer.getServer().getPlayerManager().getPlayer(request.sourceID);
+        for (TeleportRequest request : requestList) {
+            ServerPlayerEntity sourcePlayer = targetPlayer.getServer().getPlayerManager().getPlayer(request.sourcePlayerID);
             if (sourcePlayer == null) {
+                playerNotFound(targetPlayer);
                 continue;
             }
-            Vec3d position = targetPlayer.getPos();
-            AnchorStack stack = ((AnchorStorage) sourcePlayer).easyTeleport$getStack();
-            stack.tpp(new Anchor(sourcePlayer.getPos(), sourcePlayer.getWorld().getRegistryKey()), stackDepth);
-            sourcePlayer.teleport(targetPlayer.getServerWorld(), position.x, position.y, position.z, sourcePlayer.getYaw(), sourcePlayer.getPitch());
-            sendMessage(sourcePlayer.getCommandSource(), true, Text.literal("Teleport to ").formatted(GREEN),
-                    Text.literal(targetPlayer.getName().getString()).formatted(GOLD), Text.literal(" successfully.").formatted(GREEN));
-            sendMessage(targetPlayer.getCommandSource(), true, Text.literal(sourcePlayer.getName().getString()).formatted(GOLD),
-                    Text.literal(" is teleported to you.").formatted(GREEN));
+            TeleportStack stack = ((TeleportStorage) sourcePlayer).easyTeleport$getStack();
+            stack.tpp(sourcePlayer, targetPlayer, stackDepth);
         }
         requestList.clear();
         requests.keySet().remove(targetID);
@@ -339,98 +281,74 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
     }
     
     public int home(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-        ServerCommandSource source = context.getSource();
-        ServerPlayerEntity player = source.getPlayerOrThrow();
-        Map<String, Anchor> anchors = ((AnchorStorage) player).easyTeleport$getAnchors();
-        AnchorStack stack = ((AnchorStorage) player).easyTeleport$getStack();
-        Anchor anchor = anchors.get("home");
-        if (anchor == null) {
-            sendMessage(player.getCommandSource(), false, Text.literal("Anchor ").formatted(GRAY), Text.literal("home").formatted(RED),
-                    Text.literal(" not set.").formatted(GRAY));
-            return 0;
-        } else {
-            Vec3d position = anchor.position();
-            stack.tpp(new Anchor(player.getPos(), player.getWorld().getRegistryKey()), stackDepth);
-            player.teleport(player.getServer().getWorld(anchor.world()), position.x, position.y, position.z, player.getYaw(), player.getPitch());
-            sendMessage(player.getCommandSource(), true, Text.literal("Teleport to ").formatted(GREEN), Text.literal("home").formatted(YELLOW),
-                    Text.literal(".").formatted(GREEN));
-            return 1;
-        }
+        ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
+        TeleportStack stack = ((TeleportStorage) player).easyTeleport$getStack();
+        return stack.tpp(player, "home", stackDepth);
     }
     
     public int setHome(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-        ServerCommandSource source = context.getSource();
-        ServerPlayerEntity player = source.getPlayerOrThrow();
-        Map<String, Anchor> anchors = ((AnchorStorage) player).easyTeleport$getAnchors();
-        if (anchors.size() < anchorLimit) {
-            Vec3d position = player.getPos();
-            Anchor anchor = new Anchor(position, player.getWorld().getRegistryKey());
-            anchors.put("home", anchor);
-            sendMessage(player.getCommandSource(), true, Text.literal("Anchor ").formatted(GREEN), Text.literal("home").formatted(YELLOW),
-                    Text.literal(" set at ").formatted(GREEN), Text.literal(format(position)).formatted(GRAY), Text.literal(" successfully.").formatted(GREEN));
-            return 1;
-        } else {
+        ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
+        Map<String, TeleportAnchor> anchors = ((TeleportStorage) player).easyTeleport$getAnchors();
+        if (anchors.size() >= anchorLimit) {
             sendMessage(player.getCommandSource(), false, Text.literal("Anchor count limit exceeded.").formatted(RED));
             return 0;
         }
+        anchors.put("home", new TeleportAnchor("home", player.getPos(), player.getServerWorld().getRegistryKey()));
+        sendMessage(player.getCommandSource(), true, Text.literal("Anchor ").formatted(GREEN), Text.literal("home").formatted(YELLOW),
+                Text.literal(" set at ").formatted(GREEN), Text.literal(format(player.getPos())).formatted(GRAY),
+                Text.literal(" successfully.").formatted(GREEN));
+        return 1;
     }
     
     public int listAnchors(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-        ServerCommandSource source = context.getSource();
-        ServerPlayerEntity player = source.getPlayerOrThrow();
-        Map<String, Anchor> anchors = ((AnchorStorage) player).easyTeleport$getAnchors();
+        ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
+        Map<String, TeleportAnchor> anchors = ((TeleportStorage) player).easyTeleport$getAnchors();
         if (anchors.isEmpty()) {
             sendMessage(player.getCommandSource(), true, Text.literal("No anchors set.").formatted(GRAY));
             return 0;
-        } else {
-            sendMessage(player.getCommandSource(), true, Text.literal("Anchors set by ").formatted(GREEN), ((MutableText) player.getName()).formatted(GOLD),
-                    Text.literal(":").formatted(GREEN));
-            ArrayList<String> anchorNames = new ArrayList<>(anchors.keySet());
-            anchorNames.sort(String::compareToIgnoreCase);
-            for (String anchorName : anchorNames) {
-                sendMessage(player.getCommandSource(), true, Text.literal(" -").formatted(GRAY), Text.literal(anchorName).formatted(YELLOW),
-                        Text.literal(" at ").formatted(GRAY), Text.literal(format(anchors.get(anchorName).position())).formatted(GRAY));
-            }
-            return 1;
         }
+        sendMessage(player.getCommandSource(), true, Text.literal("Anchors set by ").formatted(GREEN),
+                Text.literal(player.getName().getString()).formatted(GOLD), Text.literal(":").formatted(GREEN));
+        ArrayList<String> anchorNames = new ArrayList<>(anchors.keySet());
+        anchorNames.sort(String::compareToIgnoreCase);
+        for (String anchorName : anchorNames) {
+            sendMessage(player.getCommandSource(), true, Text.literal(" -").formatted(GRAY), Text.literal(anchorName).formatted(YELLOW),
+                    Text.literal(" at ").formatted(GRAY), Text.literal(format(anchors.get(anchorName).position())).formatted(GRAY));
+        }
+        return 1;
     }
     
     public int clearAnchors(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-        ServerCommandSource source = context.getSource();
-        ServerPlayerEntity player = source.getPlayerOrThrow();
-        Map<String, Anchor> anchors = ((AnchorStorage) player).easyTeleport$getAnchors();
+        ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
+        Map<String, TeleportAnchor> anchors = ((TeleportStorage) player).easyTeleport$getAnchors();
         if (anchors.isEmpty()) {
             sendMessage(player.getCommandSource(), true, Text.literal("No anchors set.").formatted(GRAY));
             return 0;
-        } else {
-            anchors.clear();
-            sendMessage(player.getCommandSource(), true, Text.literal("Anchors cleared.").formatted(GREEN));
-            return 1;
         }
+        anchors.clear();
+        sendMessage(player.getCommandSource(), true, Text.literal("Anchors cleared.").formatted(GREEN));
+        return 1;
     }
     
     public int setAnchor(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-        ServerCommandSource source = context.getSource();
-        ServerPlayerEntity player = source.getPlayerOrThrow();
-        Map<String, Anchor> anchors = ((AnchorStorage) player).easyTeleport$getAnchors();
-        if (anchors.size() < anchorLimit) {
-            Vec3d position = player.getPos();
-            String anchorName = StringArgumentType.getString(context, "anchor-name");
-            Anchor anchor = new Anchor(position, player.getWorld().getRegistryKey());
-            anchors.put(anchorName, anchor);
-            sendMessage(player.getCommandSource(), true, Text.literal("Anchor ").formatted(GREEN), Text.literal(anchorName).formatted(YELLOW),
-                    Text.literal(" set at ").formatted(GREEN), Text.literal(format(position)).formatted(GRAY), Text.literal(" successfully.").formatted(GREEN));
-            return 1;
-        } else {
+        ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
+        Map<String, TeleportAnchor> anchors = ((TeleportStorage) player).easyTeleport$getAnchors();
+        if (anchors.size() >= anchorLimit) {
             sendMessage(player.getCommandSource(), false, Text.literal("Anchor count limit exceeded.").formatted(RED));
             return 0;
         }
+        String name = StringArgumentType.getString(context, "anchor-name");
+        anchors.put(name, new TeleportAnchor(name, player.getPos(), player.getServerWorld().getRegistryKey()));
+        sendMessage(player.getCommandSource(), true, Text.literal("Anchor ").formatted(GREEN), Text.literal(name).formatted(YELLOW),
+                Text.literal(" set at ").formatted(GREEN), Text.literal(format(player.getPos())).formatted(GRAY),
+                Text.literal(" successfully.").formatted(GREEN));
+        return 1;
     }
     
     public int removeAnchor(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         ServerCommandSource source = context.getSource();
         ServerPlayerEntity player = source.getPlayerOrThrow();
-        Map<String, Anchor> anchors = ((AnchorStorage) player).easyTeleport$getAnchors();
+        Map<String, TeleportAnchor> anchors = ((TeleportStorage) player).easyTeleport$getAnchors();
         String anchorName = StringArgumentType.getString(context, "anchor-name");
         if (anchors.keySet().remove(anchorName)) {
             sendMessage(player.getCommandSource(), true, Text.literal("Anchor ").formatted(GREEN), Text.literal(anchorName).formatted(YELLOW),

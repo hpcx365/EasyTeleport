@@ -35,32 +35,6 @@ public final class EasyTeleportUtils {
         return "(%.02f, %.02f, %.02f)".formatted(position.x, position.y, position.z);
     }
     
-    public static void noRequests(ServerCommandSource source) {
-        sendMessage(source, false, Text.literal("You have no request to accept.").formatted(GRAY));
-    }
-    
-    public static UUID selectPlayer(ServerCommandSource source, Collection<GameProfile> profiles) {
-        Iterator<GameProfile> iterator = profiles.iterator();
-        if (!iterator.hasNext()) {
-            playerNotFound(source);
-            return null;
-        }
-        UUID id = iterator.next().getId();
-        if (iterator.hasNext()) {
-            multiplePlayers(source);
-            return null;
-        }
-        return id;
-    }
-    
-    public static void playerNotFound(ServerCommandSource source) {
-        sendMessage(source, false, Text.literal("Player not found.").formatted(RED));
-    }
-    
-    public static void multiplePlayers(ServerCommandSource source) {
-        sendMessage(source, false, Text.literal("Please specify only one player.").formatted(RED));
-    }
-    
     public static void sendMessage(ServerCommandSource source, boolean success, MutableText... texts) {
         if (texts.length == 0) {
             return;
@@ -74,6 +48,36 @@ public final class EasyTeleportUtils {
         } else {
             source.sendError(comp);
         }
+    }
+    
+    public static void noRequests(ServerPlayerEntity player) {
+        sendMessage(player.getCommandSource(), false, Text.literal("You have no request to accept.").formatted(GRAY));
+    }
+    
+    public static UUID selectPlayerID(ServerPlayerEntity player, Collection<GameProfile> profiles) {
+        Iterator<GameProfile> iterator = profiles.iterator();
+        if (!iterator.hasNext()) {
+            playerNotFound(player);
+            return null;
+        }
+        UUID id = iterator.next().getId();
+        if (iterator.hasNext()) {
+            sendMessage(player.getCommandSource(), false, Text.literal("Please specify only one player.").formatted(RED));
+            return null;
+        }
+        if (id.equals(player.getGameProfile().getId())) {
+            sendMessage(player.getCommandSource(), false, Text.literal("Cannot teleport to yourself.").formatted(RED));
+            return null;
+        }
+        if (player.getServer().getPlayerManager().getPlayer(id) == null) {
+            playerNotFound(player);
+            return null;
+        }
+        return id;
+    }
+    
+    public static void playerNotFound(ServerPlayerEntity player) {
+        sendMessage(player.getCommandSource(), false, Text.literal("Player not found.").formatted(RED));
     }
     
     public static void notifyRequestTimedOut(MinecraftServer server, UUID sourceID, UUID targetID) {

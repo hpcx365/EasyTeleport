@@ -21,13 +21,14 @@ public class AnchorSuggestionProvider implements SuggestionProvider<ServerComman
     @Override
     public CompletableFuture<Suggestions> getSuggestions(CommandContext<ServerCommandSource> context, SuggestionsBuilder builder)
             throws CommandSyntaxException {
-        ServerCommandSource source = context.getSource();
-        ServerPlayerEntity player = source.getPlayerOrThrow();
-        Map<String, Anchor> anchors = ((AnchorStorage) player).easyTeleport$getAnchors();
-        ArrayList<String> names = new ArrayList<>(anchors.keySet());
-        names.sort(String::compareToIgnoreCase);
-        for (String name : names) {
-            builder.suggest(name);
+        ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
+        Map<String, TeleportAnchor> anchors = ((TeleportStorage) player).easyTeleport$getAnchors();
+        if (!anchors.isEmpty()) {
+            ArrayList<String> anchorNames = new ArrayList<>(anchors.keySet());
+            anchorNames.sort(String::compareToIgnoreCase);
+            for (String anchorName : anchorNames) {
+                builder.suggest(anchorName);
+            }
         }
         return builder.buildFuture();
     }
