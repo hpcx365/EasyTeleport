@@ -8,10 +8,13 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.command.argument.GameProfileArgumentType;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -31,7 +34,8 @@ import static net.minecraft.util.Formatting.*;
 import static pers.hpcx.easyteleport.EasyTeleportConfigEnum.*;
 import static pers.hpcx.easyteleport.EasyTeleportUtils.*;
 
-public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.ServerStarting, ServerTickEvents.EndTick, CommandRegistrationCallback {
+public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.ServerStarting, ServerTickEvents.EndTick, ServerLivingEntityEvents.AfterDeath,
+        CommandRegistrationCallback {
     
     public static final int DEFAULT_STACK_DEPTH = 8;
     public static final int DEFAULT_ANCHOR_LIMIT = 16;
@@ -47,6 +51,7 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
     public void onInitialize() {
         ServerLifecycleEvents.SERVER_STARTING.register(this);
         ServerTickEvents.END_SERVER_TICK.register(this);
+        ServerLivingEntityEvents.AFTER_DEATH.register(this);
         CommandRegistrationCallback.EVENT.register(this);
     }
     
@@ -163,6 +168,14 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
                 .then(literal("timeout").then(argument(REQUEST_TIMEOUT.getKey(), REQUEST_TIMEOUT.getType()).executes(this::setRequestTimeout))));
         
         dispatcher.register(literal("config").requires(isOperator).then(literal("default").executes(this::restoreDefault)));
+    }
+    
+    @Override
+    public void afterDeath(LivingEntity entity, DamageSource damageSource) {
+        if (entity instanceof ServerPlayerEntity player) {
+            AnchorStack stack = ((AnchorStorage) player).easyTeleport$getStack();
+            stack.tpp(new Anchor(player.getPos(), player.getWorld().getRegistryKey()), stackDepth);
+        }
     }
     
     public int teleport(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {

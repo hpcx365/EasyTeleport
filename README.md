@@ -6,7 +6,7 @@ Made for servers! Clients don't have to install EasyTeleport to connect to the s
 
 ## Usage
 
-`/tpb` Teleport to your previous position.
+`/tpb` Teleport to your previous position, including your position of death.
 
 `/tpp` Revoke the command `/tpb`.
 
