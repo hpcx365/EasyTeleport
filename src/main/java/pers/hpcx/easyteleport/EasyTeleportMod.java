@@ -322,6 +322,7 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
                 TeleportStack stack = ((TeleportStorage) player).easyTeleport$getStack();
                 stack.tpp(player, targetPlayer, stackDepth);
             }
+            requests2.keySet().remove(playerID);
         }
         return requestList != null && !requestList.isEmpty() || request2 != null ? 1 : 0;
     }
