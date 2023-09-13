@@ -53,15 +53,15 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
     @Override
     public void onServerStarting(MinecraftServer server) {
         try {
-            if (Files.exists(MOD_CONFIG_PATH)) {
-                try (InputStream in = Files.newInputStream(MOD_CONFIG_PATH)) {
+            if (Files.exists(CONFIG_PATH)) {
+                try (InputStream in = Files.newInputStream(CONFIG_PATH)) {
                     Properties properties = new Properties();
                     properties.load(in);
                     getProperties(properties);
                 }
             } else {
-                Files.createFile(MOD_CONFIG_PATH);
-                try (OutputStream out = Files.newOutputStream(MOD_CONFIG_PATH)) {
+                Files.createFile(CONFIG_PATH);
+                try (OutputStream out = Files.newOutputStream(CONFIG_PATH)) {
                     Properties properties = new Properties();
                     setProperties(properties);
                     properties.store(out, "easy-teleport mod config");
@@ -161,6 +161,8 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
         
         dispatcher.register(literal("config").requires(isOperator)
                 .then(literal("timeout").then(argument(REQUEST_TIMEOUT.getKey(), REQUEST_TIMEOUT.getType()).executes(this::setRequestTimeout))));
+        
+        dispatcher.register(literal("config").requires(isOperator).then(literal("default").executes(this::restoreDefault)));
     }
     
     public int teleport(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
@@ -441,5 +443,14 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
     public int setRequestTimeout(CommandContext<ServerCommandSource> context) {
         requestTimeout = IntegerArgumentType.getInteger(context, REQUEST_TIMEOUT.getKey());
         return storeProperty(context.getSource(), REQUEST_TIMEOUT.getKey(), Integer.toString(requestTimeout));
+    }
+    
+    public int restoreDefault(CommandContext<ServerCommandSource> context) {
+        stackDepth = DEFAULT_STACK_DEPTH;
+        anchorLimit = DEFAULT_ANCHOR_LIMIT;
+        requestTimeout = DEFAULT_REQUEST_TIMEOUT;
+        String[] keys = {STACK_DEPTH.getKey(), ANCHOR_LIMIT.getKey(), REQUEST_TIMEOUT.getKey()};
+        String[] values = {Integer.toString(stackDepth), Integer.toString(anchorLimit), Integer.toString(requestTimeout)};
+        return storeProperties(context.getSource(), keys, values);
     }
 }

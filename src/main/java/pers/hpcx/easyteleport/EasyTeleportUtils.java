@@ -25,7 +25,8 @@ import static net.minecraft.util.Formatting.*;
 public final class EasyTeleportUtils {
     
     public static final String MOD_ID = "easyteleport";
-    public static final Path MOD_CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve("easy-teleport.properties");
+    public static final String CONFIG_COMMENTS = "easy-teleport mod config";
+    public static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve("easy-teleport.properties");
     
     private EasyTeleportUtils() {
     }
@@ -91,7 +92,7 @@ public final class EasyTeleportUtils {
                 Text.literal(" successfully.").formatted(GREEN));
         Properties properties = new Properties();
         
-        try (InputStream in = Files.newInputStream(MOD_CONFIG_PATH)) {
+        try (InputStream in = Files.newInputStream(CONFIG_PATH)) {
             properties.load(in);
         } catch (IOException e) {
             sendMessage(source, false, Text.literal("Failed to read config file: ").formatted(GRAY), Text.literal(e.getMessage()).formatted(RED));
@@ -100,12 +101,42 @@ public final class EasyTeleportUtils {
         
         properties.setProperty(key, value);
         
-        try (OutputStream out = Files.newOutputStream(MOD_CONFIG_PATH)) {
-            properties.store(out, "easy-teleport mod config");
-            return 1;
+        try (OutputStream out = Files.newOutputStream(CONFIG_PATH)) {
+            properties.store(out, CONFIG_COMMENTS);
         } catch (IOException e) {
             sendMessage(source, false, Text.literal("Failed to write config file: ").formatted(GRAY), Text.literal(e.getMessage()).formatted(RED));
             return 0;
         }
+        
+        return 1;
+    }
+    
+    public static int storeProperties(ServerCommandSource source, String[] keys, String[] values) {
+        int n = keys.length;
+        for (int i = 0; i < n; i++) {
+            sendMessage(source, true, Text.literal(keys[i]).formatted(LIGHT_PURPLE), Text.literal(" set to ").formatted(GREEN),
+                    Text.literal(values[i]).formatted(GOLD), Text.literal(" successfully.").formatted(GREEN));
+        }
+        Properties properties = new Properties();
+        
+        try (InputStream in = Files.newInputStream(CONFIG_PATH)) {
+            properties.load(in);
+        } catch (IOException e) {
+            sendMessage(source, false, Text.literal("Failed to read config file: ").formatted(GRAY), Text.literal(e.getMessage()).formatted(RED));
+            return 0;
+        }
+        
+        for (int i = 0; i < n; i++) {
+            properties.setProperty(keys[i], values[i]);
+        }
+        
+        try (OutputStream out = Files.newOutputStream(CONFIG_PATH)) {
+            properties.store(out, CONFIG_COMMENTS);
+        } catch (IOException e) {
+            sendMessage(source, false, Text.literal("Failed to write config file: ").formatted(GRAY), Text.literal(e.getMessage()).formatted(RED));
+            return 0;
+        }
+        
+        return 1;
     }
 }

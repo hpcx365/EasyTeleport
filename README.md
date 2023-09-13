@@ -37,6 +37,8 @@ command `/tpb` can also take effect.
 
 `/config timeout <request-timeout>` Set the timeout of requests in milliseconds.
 
+`/config default` Restore all default values.
+
 `stack-depth`, `anchor-limit` and `request-timeout` can also be set in **_easy-teleport.properties_**.
 
 ## Github
