@@ -11,10 +11,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import pers.hpcx.easyteleport.Anchor;
 import pers.hpcx.easyteleport.AnchorStack;
 import pers.hpcx.easyteleport.AnchorStorage;
-import pers.hpcx.easyteleport.EasyTeleportMod;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import static pers.hpcx.easyteleport.EasyTeleportUtils.MOD_ID;
 
 @Mixin(ServerPlayerEntity.class)
 public class ServerPlayerMixin implements AnchorStorage {
@@ -37,10 +38,10 @@ public class ServerPlayerMixin implements AnchorStorage {
     @Inject(at = @At("RETURN"), method = "readCustomDataFromNbt(Lnet/minecraft/nbt/NbtCompound;)V")
     public void readCustomDataFromNbt(NbtCompound nbt, CallbackInfo c) {
         NbtCompound modData = null;
-        if (nbt.contains(EasyTeleportMod.MOD_ID)) {
-            modData = nbt.getCompound(EasyTeleportMod.MOD_ID);
-        } else if (nbt.contains("PlayerPersisted") && nbt.getCompound("PlayerPersisted").contains(EasyTeleportMod.MOD_ID)) {
-            modData = nbt.getCompound("PlayerPersisted").getCompound(EasyTeleportMod.MOD_ID);
+        if (nbt.contains(MOD_ID)) {
+            modData = nbt.getCompound(MOD_ID);
+        } else if (nbt.contains("PlayerPersisted") && nbt.getCompound("PlayerPersisted").contains(MOD_ID)) {
+            modData = nbt.getCompound("PlayerPersisted").getCompound(MOD_ID);
         }
         if (modData == null) {
             return;
@@ -67,7 +68,7 @@ public class ServerPlayerMixin implements AnchorStorage {
         
         modData.put("stack", stackData);
         modData.put("anchors", anchorData);
-        nbt.put(EasyTeleportMod.MOD_ID, modData);
+        nbt.put(MOD_ID, modData);
     }
     
     @Inject(at = @At("RETURN"), method = "copyFrom(Lnet/minecraft/server/network/ServerPlayerEntity;Z)V")

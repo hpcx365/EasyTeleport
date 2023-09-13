@@ -17,6 +17,8 @@ command `/tpb` can also take effect.
 
 `/tpaccept` Accept all requests that have not timed out.
 
+`/tpaccept <source-player>` Accept the request from a specific player.
+
 `/home` Teleport you to home.
 
 `/sethome` Set home at your current position.
