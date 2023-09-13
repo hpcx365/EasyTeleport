@@ -115,7 +115,7 @@ public final class EasyTeleportUtils {
         return 1;
     }
     
-    public static int restoreDefault(ServerCommandSource source, String[] keys, String[] values) {
+    public static int restoreProperties(ServerCommandSource source, String[] keys, String[] values) {
         for (int i = 0; i < keys.length; i++) {
             sendMessage(source, true, Text.literal(keys[i]).formatted(LIGHT_PURPLE), Text.literal(" set to ").formatted(GREEN),
                     Text.literal(values[i]).formatted(GOLD), Text.literal(" successfully.").formatted(GREEN));
