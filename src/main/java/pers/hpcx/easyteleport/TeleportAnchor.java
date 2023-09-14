@@ -3,11 +3,16 @@ package pers.hpcx.easyteleport;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
 public record TeleportAnchor(Vec3d position, RegistryKey<World> world) {
+    
+    public TeleportAnchor(ServerPlayerEntity player) {
+        this(player.getPos(), player.getServerWorld().getRegistryKey());
+    }
     
     public NbtCompound toCompound() {
         NbtCompound data = new NbtCompound();

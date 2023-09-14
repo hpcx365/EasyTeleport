@@ -18,7 +18,6 @@ import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,7 +27,6 @@ import java.util.*;
 import java.util.function.Predicate;
 
 import static net.minecraft.server.command.CommandManager.*;
-import static net.minecraft.util.Formatting.*;
 import static pers.hpcx.easyteleport.EasyTeleportConfig.*;
 import static pers.hpcx.easyteleport.EasyTeleportUtils.*;
 
@@ -223,18 +221,14 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
         } else {
             for (TeleportRequest request : requestList) {
                 if (request.sourcePlayerID.equals(sourceID)) {
-                    sendMessage(sourcePlayer.getCommandSource(), false, Text.literal("You have requested to teleport to ").formatted(GRAY),
-                            Text.literal(targetPlayer.getName().getString()).formatted(GOLD), Text.literal(".").formatted(GRAY));
+                    send(sourcePlayer, false, gray("You have requested to teleport to "), player(targetPlayer), gray("."));
                     return 0;
                 }
             }
         }
         requestList.add(new TeleportRequest(sourceID, targetID, requestTimeout / 50));
-        sendMessage(sourcePlayer.getCommandSource(), true, Text.literal("Requested to teleport to ").formatted(GREEN),
-                Text.literal(targetPlayer.getName().getString()).formatted(GOLD), Text.literal(".").formatted(GREEN));
-        sendMessage(targetPlayer.getCommandSource(), true, Text.literal(sourcePlayer.getName().getString()).formatted(GOLD),
-                Text.literal(" has requested to teleport to you. Type ").formatted(GREEN), Text.literal("/tpaccept").formatted(YELLOW),
-                Text.literal(" to accept.").formatted(GREEN));
+        send(sourcePlayer, true, green("Requested to teleport to "), player(targetPlayer), green("."));
+        send(targetPlayer, true, player(sourcePlayer), green(" has requested to teleport to you. Type "), yellow("/tpaccept"), green(" to accept."));
         return 1;
     }
     
@@ -250,16 +244,12 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
         }
         TeleportRequest request = requests2.get(sourceID);
         if (request != null) {
-            sendMessage(targetPlayer.getCommandSource(), false, Text.literal(sourcePlayer.getName().getString()).formatted(GOLD),
-                    Text.literal(" has already received a request.").formatted(GRAY));
+            send(targetPlayer, false, player(sourcePlayer), gray(" has already received a request."));
             return 0;
         }
         requests2.put(sourceID, new TeleportRequest(sourceID, targetID, requestTimeout / 50));
-        sendMessage(sourcePlayer.getCommandSource(), true, Text.literal(targetPlayer.getName().getString()).formatted(GOLD),
-                Text.literal(" has requested to teleport you to there. Type ").formatted(GREEN), Text.literal("/tpaccept").formatted(YELLOW),
-                Text.literal(" to accept.").formatted(GREEN));
-        sendMessage(targetPlayer.getCommandSource(), true, Text.literal("Requested to teleport ").formatted(GREEN),
-                Text.literal(sourcePlayer.getName().getString()).formatted(GOLD), Text.literal(" to you.").formatted(GREEN));
+        send(sourcePlayer, true, player(targetPlayer), green(" has requested to teleport you to there. Type "), yellow("/tpaccept"), green(" to accept."));
+        send(targetPlayer, true, green("Requested to teleport "), player(sourcePlayer), green(" to you."));
         return 1;
     }
     
@@ -270,7 +260,7 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
         UUID targetID = targetPlayer.getUuid();
         List<TeleportRequest> requestList = requests.get(targetID);
         if (requestList == null || requestList.isEmpty()) {
-            noRequests(targetPlayer);
+            send(targetPlayer, false, gray("You have no request to accept."));
             return 0;
         }
         Iterator<TeleportRequest> iterator = requestList.iterator();
@@ -301,7 +291,7 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
         UUID playerID = player.getUuid();
         List<TeleportRequest> requestList = requests.get(playerID);
         TeleportRequest request2 = requests2.get(playerID);
-        if (requestList != null && !requestList.isEmpty()) {
+        if (requestList != null) {
             for (TeleportRequest request : requestList) {
                 ServerPlayerEntity sourcePlayer = player.getServer().getPlayerManager().getPlayer(request.sourcePlayerID);
                 if (sourcePlayer == null) {
@@ -324,7 +314,7 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
             }
             requests2.keySet().remove(playerID);
         }
-        return requestList != null && !requestList.isEmpty() || request2 != null ? 1 : 0;
+        return requestList != null || request2 != null ? 1 : 0;
     }
     
     public int home(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
@@ -337,13 +327,12 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
         ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
         Map<String, TeleportAnchor> anchors = ((TeleportStorage) player).easyTeleport$getAnchors();
         if (anchors.size() >= anchorLimit) {
-            sendMessage(player.getCommandSource(), false, Text.literal("Anchor count limit exceeded.").formatted(RED));
+            send(player, false, red("Anchor count limit exceeded."));
             return 0;
         }
-        anchors.put("home", new TeleportAnchor(player.getPos(), player.getServerWorld().getRegistryKey()));
-        sendMessage(player.getCommandSource(), true, Text.literal("Anchor ").formatted(GREEN), Text.literal("home").formatted(YELLOW),
-                Text.literal(" set at ").formatted(GREEN), Text.literal(format(player.getPos())).formatted(GRAY),
-                Text.literal(" successfully.").formatted(GREEN));
+        TeleportAnchor anchor = new TeleportAnchor(player);
+        anchors.put("home", anchor);
+        send(player, true, green("Set anchor "), anchor("home", anchor), green("."));
         return 1;
     }
     
@@ -351,16 +340,14 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
         ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
         Map<String, TeleportAnchor> anchors = ((TeleportStorage) player).easyTeleport$getAnchors();
         if (anchors.isEmpty()) {
-            sendMessage(player.getCommandSource(), true, Text.literal("No anchors set.").formatted(GRAY));
+            send(player, true, gray("No anchors set."));
             return 0;
         }
-        sendMessage(player.getCommandSource(), true, Text.literal("Anchors set by ").formatted(GREEN),
-                Text.literal(player.getName().getString()).formatted(GOLD), Text.literal(":").formatted(GREEN));
         ArrayList<String> anchorNames = new ArrayList<>(anchors.keySet());
         anchorNames.sort(String::compareToIgnoreCase);
+        send(player, true, green("Anchors set by "), player(player), green(":"));
         for (String anchorName : anchorNames) {
-            sendMessage(player.getCommandSource(), true, Text.literal(" -").formatted(GRAY), Text.literal(anchorName).formatted(YELLOW),
-                    Text.literal(" at ").formatted(GRAY), Text.literal(format(anchors.get(anchorName).position())).formatted(GRAY));
+            send(player, true, gray(" -"), anchor(anchorName, anchors.get(anchorName)));
         }
         return 1;
     }
@@ -369,42 +356,41 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
         ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
         Map<String, TeleportAnchor> anchors = ((TeleportStorage) player).easyTeleport$getAnchors();
         if (anchors.isEmpty()) {
-            sendMessage(player.getCommandSource(), true, Text.literal("No anchors set.").formatted(GRAY));
+            send(player, true, gray("No anchors set."));
             return 0;
+        } else {
+            anchors.clear();
+            send(player, true, green("Anchors cleared."));
+            return 1;
         }
-        anchors.clear();
-        sendMessage(player.getCommandSource(), true, Text.literal("Anchors cleared.").formatted(GREEN));
-        return 1;
     }
     
     public int setAnchor(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
         Map<String, TeleportAnchor> anchors = ((TeleportStorage) player).easyTeleport$getAnchors();
         if (anchors.size() >= anchorLimit) {
-            sendMessage(player.getCommandSource(), false, Text.literal("Anchor count limit exceeded.").formatted(RED));
+            send(player, false, red("Anchor count limit exceeded."));
             return 0;
         }
-        String name = StringArgumentType.getString(context, "anchor-name");
-        anchors.put(name, new TeleportAnchor(player.getPos(), player.getServerWorld().getRegistryKey()));
-        sendMessage(player.getCommandSource(), true, Text.literal("Anchor ").formatted(GREEN), Text.literal(name).formatted(YELLOW),
-                Text.literal(" set at ").formatted(GREEN), Text.literal(format(player.getPos())).formatted(GRAY),
-                Text.literal(" successfully.").formatted(GREEN));
+        String anchorName = StringArgumentType.getString(context, "anchor-name");
+        TeleportAnchor anchor = new TeleportAnchor(player);
+        anchors.put(anchorName, anchor);
+        send(player, true, green("Set anchor "), anchor(anchorName, anchor), green("."));
         return 1;
     }
     
     public int removeAnchor(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-        ServerCommandSource source = context.getSource();
-        ServerPlayerEntity player = source.getPlayerOrThrow();
+        ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
         Map<String, TeleportAnchor> anchors = ((TeleportStorage) player).easyTeleport$getAnchors();
         String anchorName = StringArgumentType.getString(context, "anchor-name");
-        if (anchors.keySet().remove(anchorName)) {
-            sendMessage(player.getCommandSource(), true, Text.literal("Anchor ").formatted(GREEN), Text.literal(anchorName).formatted(YELLOW),
-                    Text.literal(" removed.").formatted(GREEN));
-            return 1;
-        } else {
-            sendMessage(player.getCommandSource(), false, Text.literal("Anchor ").formatted(GRAY), Text.literal(anchorName).formatted(RED),
-                    Text.literal(" not set.").formatted(GRAY));
+        TeleportAnchor anchor = anchors.get(anchorName);
+        if (anchor == null) {
+            send(player, false, gray("Anchor "), red(anchorName), gray(" not found."));
             return 0;
+        } else {
+            anchors.keySet().remove(anchorName);
+            send(player, true, green("Remove anchor "), anchor(anchorName, anchor), green("."));
+            return 1;
         }
     }
     

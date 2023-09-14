@@ -31,11 +31,57 @@ public final class EasyTeleportUtils {
     private EasyTeleportUtils() {
     }
     
-    public static String format(Vec3d position) {
-        return "(%.02f, %.02f, %.02f)".formatted(position.x, position.y, position.z);
+    public static MutableText green(String str) {
+        return Text.literal(str).formatted(GREEN);
     }
     
-    public static void sendMessage(ServerCommandSource source, boolean success, MutableText... texts) {
+    public static MutableText red(String str) {
+        return Text.literal(str).formatted(RED);
+    }
+    
+    public static MutableText yellow(String str) {
+        return Text.literal(str).formatted(YELLOW);
+    }
+    
+    public static MutableText gold(String str) {
+        return Text.literal(str).formatted(GOLD);
+    }
+    
+    public static MutableText purple(String str) {
+        return Text.literal(str).formatted(LIGHT_PURPLE);
+    }
+    
+    public static MutableText gray(String str) {
+        return Text.literal(str).formatted(GRAY);
+    }
+    
+    public static MutableText anchor(String anchorName, TeleportAnchor anchor) {
+        return yellow(anchorName).append(gray(" at ")).append(position(anchor.position()));
+    }
+    
+    public static MutableText player(ServerPlayerEntity player) {
+        return gold(player.getName().getString());
+    }
+    
+    public static MutableText position(Vec3d position) {
+        return gray("(%.02f, %.02f, %.02f)".formatted(position.x, position.y, position.z));
+    }
+    
+    public static void teleport(ServerPlayerEntity player, ServerPlayerEntity target) {
+        Vec3d position = target.getPos();
+        player.teleport(target.getServerWorld(), position.x, position.y, position.z, player.getYaw(), player.getPitch());
+    }
+    
+    public static void teleport(ServerPlayerEntity player, TeleportAnchor anchor) {
+        Vec3d position = anchor.position();
+        player.teleport(player.getServer().getWorld(anchor.world()), position.x, position.y, position.z, player.getYaw(), player.getPitch());
+    }
+    
+    public static void send(ServerPlayerEntity player, boolean success, MutableText... texts) {
+        send(player.getCommandSource(), success, texts);
+    }
+    
+    public static void send(ServerCommandSource source, boolean success, MutableText... texts) {
         if (texts.length == 0) {
             return;
         }
@@ -50,8 +96,8 @@ public final class EasyTeleportUtils {
         }
     }
     
-    public static void noRequests(ServerPlayerEntity player) {
-        sendMessage(player.getCommandSource(), false, Text.literal("You have no request to accept.").formatted(GRAY));
+    public static void playerNotFound(ServerPlayerEntity player) {
+        send(player, false, red("Player not found."));
     }
     
     public static UUID selectPlayerID(ServerPlayerEntity player, Collection<GameProfile> profiles) {
@@ -62,11 +108,11 @@ public final class EasyTeleportUtils {
         }
         UUID id = iterator.next().getId();
         if (iterator.hasNext()) {
-            sendMessage(player.getCommandSource(), false, Text.literal("Please specify only one player.").formatted(RED));
+            send(player, false, red("Please specify only one player."));
             return null;
         }
         if (id.equals(player.getGameProfile().getId())) {
-            sendMessage(player.getCommandSource(), false, Text.literal("Cannot teleport to yourself.").formatted(RED));
+            send(player, false, red("Cannot teleport to yourself."));
             return null;
         }
         if (player.getServer().getPlayerManager().getPlayer(id) == null) {
@@ -76,30 +122,23 @@ public final class EasyTeleportUtils {
         return id;
     }
     
-    public static void playerNotFound(ServerPlayerEntity player) {
-        sendMessage(player.getCommandSource(), false, Text.literal("Player not found.").formatted(RED));
-    }
-    
     public static void notifyRequestTimedOut(MinecraftServer server, UUID sourceID, UUID targetID) {
         ServerPlayerEntity source = server.getPlayerManager().getPlayer(sourceID);
         ServerPlayerEntity target = server.getPlayerManager().getPlayer(targetID);
         if (source != null && target != null) {
-            sendMessage(source.getCommandSource(), true, Text.literal("Teleport request to ").formatted(GRAY),
-                    Text.literal(target.getName().getString()).formatted(GOLD), Text.literal(" has timed out.").formatted(GRAY));
-            sendMessage(target.getCommandSource(), true, Text.literal("Teleport request from ").formatted(GRAY),
-                    Text.literal(source.getName().getString()).formatted(GOLD), Text.literal(" has timed out.").formatted(GRAY));
+            send(source, true, gray("Teleport request to "), player(target), gray(" has timed out."));
+            send(target, true, gray("Teleport request from "), player(source), gray(" has timed out."));
         }
     }
     
     public static int storeProperty(ServerCommandSource source, String key, String value) {
-        sendMessage(source, true, Text.literal(key).formatted(LIGHT_PURPLE), Text.literal(" set to ").formatted(GREEN), Text.literal(value).formatted(GOLD),
-                Text.literal(" successfully.").formatted(GREEN));
+        send(source, true, purple(key), green(" set to "), yellow(value), green("."));
         Properties properties = new Properties();
         
         try (InputStream in = Files.newInputStream(CONFIG_PATH)) {
             properties.load(in);
         } catch (IOException e) {
-            sendMessage(source, false, Text.literal("Failed to read config file: ").formatted(GRAY), Text.literal(e.getMessage()).formatted(RED));
+            send(source, false, gray("Failed to read config file: "), red(e.getMessage()));
             return 0;
         }
         
@@ -108,7 +147,7 @@ public final class EasyTeleportUtils {
         try (OutputStream out = Files.newOutputStream(CONFIG_PATH)) {
             properties.store(out, CONFIG_COMMENTS);
         } catch (IOException e) {
-            sendMessage(source, false, Text.literal("Failed to write config file: ").formatted(GRAY), Text.literal(e.getMessage()).formatted(RED));
+            send(source, false, gray("Failed to write config file: "), red(e.getMessage()));
             return 0;
         }
         
@@ -117,14 +156,13 @@ public final class EasyTeleportUtils {
     
     public static int restoreProperties(ServerCommandSource source, String[] keys, String[] values) {
         for (int i = 0; i < keys.length; i++) {
-            sendMessage(source, true, Text.literal(keys[i]).formatted(LIGHT_PURPLE), Text.literal(" set to ").formatted(GREEN),
-                    Text.literal(values[i]).formatted(GOLD), Text.literal(" successfully.").formatted(GREEN));
+            send(source, true, purple(keys[i]), green(" set to "), yellow(values[i]), green("."));
         }
         try {
             Files.deleteIfExists(CONFIG_PATH);
             return 1;
         } catch (IOException e) {
-            sendMessage(source, false, Text.literal("Failed to write config file: ").formatted(GRAY), Text.literal(e.getMessage()).formatted(RED));
+            send(source, false, gray("Failed to write config file: "), red(e.getMessage()));
             return 0;
         }
     }

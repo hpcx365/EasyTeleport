@@ -1,10 +1,10 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "pers.hpcx.easyteleport.mixin",
+  "package": "pers.hpcx.easyteleport",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
-    "ServerPlayerMixin"
+    "pers.hpcx.easyteleport.ServerPlayerMixin"
   ],
   "client": [
   ],
