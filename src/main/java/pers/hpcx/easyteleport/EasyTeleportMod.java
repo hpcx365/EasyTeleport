@@ -187,7 +187,8 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
                 .then(literal("set").then(argument("anchor-name", StringArgumentType.string()).executes(this::setPublicAnchor))));
         
         dispatcher.register(literal("public").requires(isOperator).then(literal("remove").then(
-                argument("anchor-name", StringArgumentType.string()).suggests(AnchorSuggestionProvider.suggestions(this)).executes(this::removePublicAnchor))));
+                argument("anchor-name", StringArgumentType.string()).suggests(PublicAnchorSuggestionProvider.suggestions(this))
+                        .executes(this::removePublicAnchor))));
         
         dispatcher.register(literal("config").requires(isOperator)
                 .then(literal("depth").then(argument(STACK_DEPTH.getKey(), STACK_DEPTH.getType()).executes(this::setStackDepth))));
