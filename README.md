@@ -1,6 +1,6 @@
 # EasyTeleport
 
-A mod adding command `/tpb`, `/tpp`, `/tpa`, `/tphere`, `/tpaccept`, `/home`, `/sethome`, `/anchor` and `/config`.
+A mod adding command `/tpb`, `/tpp`, `/tpa`, `/tphere`, `/tpaccept`, `/home`, `/sethome`, `/anchor`, `/public` and `/config`.
 
 Made for servers! Clients don't have to install EasyTeleport to connect to the server.
 
@@ -31,6 +31,14 @@ Made for servers! Clients don't have to install EasyTeleport to connect to the s
 `/anchor set <anchor-name>` Set an anchor at your current position.
 
 `/anchor remove <anchor-name>` Remove an anchor.
+
+`/public list` List all public anchors.
+
+`/public clear` Remove all public anchors.
+
+`/public set <anchor-name>` Set a public anchor at your current position.
+
+`/public remove <anchor-name>` Remove a public anchor.
 
 `/config depth <stack-depth>` Set the teleport stack depth.
 
