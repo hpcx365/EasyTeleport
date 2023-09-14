@@ -1,6 +1,7 @@
 # EasyTeleport
 
-A mod adding command `/tpb`, `/tpp`, `/tpa`, `/tphere`, `/tpaccept`, `/home`, `/sethome`, `/anchor`, `/public` and `/config`.
+A mod adding command `/tpb`, `/tpp`, `/tpa`, `/tphere`, `/tpaccept`, `/home`, `/sethome`, `/anchor`, `/public`
+and `/config`.
 
 Made for servers! Clients don't have to install EasyTeleport to connect to the server.
 

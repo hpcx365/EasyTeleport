@@ -421,14 +421,14 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
     public int listPublicAnchors(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
         if (publicAnchors.isEmpty()) {
-            send(player, true, gray("No anchors set."));
+            send(player, true, gray("No public anchors set."));
             return 0;
         }
         ArrayList<String> anchorNames = new ArrayList<>(publicAnchors.keySet());
         anchorNames.sort(String::compareToIgnoreCase);
-        send(player, true, green("Anchors set by "), player(player), green(":"));
+        send(player, true, green("Public anchors:"));
         for (String anchorName : anchorNames) {
-            send(player, true, gray(" -"), anchor(anchorName, publicAnchors.get(anchorName)));
+            send(player, true, gray(" -"), anchor(anchorName, publicAnchors.get(anchorName), false, true));
         }
         return 1;
     }
@@ -436,11 +436,11 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
     public int clearPublicAnchors(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
         if (publicAnchors.isEmpty()) {
-            send(player, true, gray("No anchors set."));
+            send(player, true, gray("No public anchors set."));
             return 0;
         } else {
             publicAnchors.clear();
-            send(player, true, green("Anchors cleared."));
+            send(player, true, green("Public anchors cleared."));
             return storePublicAnchors(player, publicAnchors);
         }
     }
@@ -450,7 +450,7 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
         String anchorName = StringArgumentType.getString(context, "anchor-name");
         TeleportAnchor anchor = new TeleportAnchor(player);
         publicAnchors.put(anchorName, anchor);
-        send(player, true, green("Set anchor "), anchor(anchorName, anchor), green("."));
+        send(player, true, green("Set public anchor "), anchor(anchorName, anchor, false, true), green("."));
         return storePublicAnchors(player, publicAnchors);
     }
     
@@ -459,11 +459,11 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
         String anchorName = StringArgumentType.getString(context, "anchor-name");
         TeleportAnchor anchor = publicAnchors.get(anchorName);
         if (anchor == null) {
-            send(player, false, gray("Anchor "), red(anchorName), gray(" not found."));
+            send(player, false, gray("Public anchor "), red(anchorName), gray(" not found."));
             return 0;
         } else {
             publicAnchors.keySet().remove(anchorName);
-            send(player, true, green("Remove anchor "), anchor(anchorName, anchor), green("."));
+            send(player, true, green("Remove public anchor "), anchor(anchorName, anchor, false, true), green("."));
             return storePublicAnchors(player, publicAnchors);
         }
     }
