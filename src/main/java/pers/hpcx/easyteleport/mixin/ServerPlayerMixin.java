@@ -1,4 +1,4 @@
-package pers.hpcx.easyteleport;
+package pers.hpcx.easyteleport.mixin;
 
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -7,6 +7,9 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import pers.hpcx.easyteleport.TeleportAnchor;
+import pers.hpcx.easyteleport.TeleportStack;
+import pers.hpcx.easyteleport.TeleportStorage;
 
 import java.util.HashMap;
 import java.util.Map;
