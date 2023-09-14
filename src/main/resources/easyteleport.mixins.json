@@ -4,7 +4,7 @@
   "package": "pers.hpcx.easyteleport",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
-    "pers.hpcx.easyteleport.ServerPlayerMixin"
+    "ServerPlayerMixin"
   ],
   "client": [
   ],
