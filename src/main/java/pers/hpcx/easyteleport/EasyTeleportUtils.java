@@ -2,6 +2,8 @@ package pers.hpcx.easyteleport;
 
 import com.mojang.authlib.GameProfile;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtIo;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -17,10 +19,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Properties;
-import java.util.UUID;
+import java.util.*;
 
 import static net.minecraft.util.Formatting.*;
 
@@ -144,14 +143,31 @@ public final class EasyTeleportUtils {
         }
     }
     
-    public static int storeProperty(ServerCommandSource source, String key, String value) {
-        send(source, true, purple(key), green(" set to "), yellow(value), green("."));
+    public static int storePublicAnchors(ServerPlayerEntity player, Map<String, TeleportAnchor> publicAnchors) {
+        NbtCompound anchorData = new NbtCompound();
+        for (String anchorName : publicAnchors.keySet()) {
+            anchorData.put(anchorName, publicAnchors.get(anchorName).toCompound());
+        }
+        try {
+            if (!ANCHOR_PATH.toFile().exists()) {
+                Files.createFile(ANCHOR_PATH);
+            }
+            NbtIo.write(anchorData, ANCHOR_PATH.toFile());
+        } catch (IOException e) {
+            send(player, false, gray("Failed to write anchor data: "), red(e.getMessage()));
+            return 0;
+        }
+        return 1;
+    }
+    
+    public static int storeProperty(ServerPlayerEntity player, String key, String value) {
+        send(player, true, purple(key), green(" set to "), yellow(value), green("."));
         Properties properties = new Properties();
         
         try (InputStream in = Files.newInputStream(CONFIG_PATH)) {
             properties.load(in);
         } catch (IOException e) {
-            send(source, false, gray("Failed to read config file: "), red(e.getMessage()));
+            send(player, false, gray("Failed to read config file: "), red(e.getMessage()));
             return 0;
         }
         
@@ -160,22 +176,22 @@ public final class EasyTeleportUtils {
         try (OutputStream out = Files.newOutputStream(CONFIG_PATH)) {
             properties.store(out, CONFIG_COMMENTS);
         } catch (IOException e) {
-            send(source, false, gray("Failed to write config file: "), red(e.getMessage()));
+            send(player, false, gray("Failed to write config file: "), red(e.getMessage()));
             return 0;
         }
         
         return 1;
     }
     
-    public static int restoreProperties(ServerCommandSource source, String[] keys, String[] values) {
+    public static int restoreProperties(ServerPlayerEntity player, String[] keys, String[] values) {
         for (int i = 0; i < keys.length; i++) {
-            send(source, true, purple(keys[i]), green(" set to "), yellow(values[i]), green("."));
+            send(player, true, purple(keys[i]), green(" set to "), yellow(values[i]), green("."));
         }
         try {
             Files.deleteIfExists(CONFIG_PATH);
             return 1;
         } catch (IOException e) {
-            send(source, false, gray("Failed to write config file: "), red(e.getMessage()));
+            send(player, false, gray("Failed to write config file: "), red(e.getMessage()));
             return 0;
         }
     }

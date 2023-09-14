@@ -440,21 +440,17 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
         } else {
             publicAnchors.clear();
             send(player, true, green("Anchors cleared."));
-            return 1;
+            return storePublicAnchors(player, publicAnchors);
         }
     }
     
     public int setPublicAnchor(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
-        if (publicAnchors.size() >= anchorLimit) {
-            send(player, false, red("Anchor count limit exceeded."));
-            return 0;
-        }
         String anchorName = StringArgumentType.getString(context, "anchor-name");
         TeleportAnchor anchor = new TeleportAnchor(player);
         publicAnchors.put(anchorName, anchor);
         send(player, true, green("Set anchor "), anchor(anchorName, anchor), green("."));
-        return 1;
+        return storePublicAnchors(player, publicAnchors);
     }
     
     public int removePublicAnchor(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
@@ -467,31 +463,35 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
         } else {
             publicAnchors.keySet().remove(anchorName);
             send(player, true, green("Remove anchor "), anchor(anchorName, anchor), green("."));
-            return 1;
+            return storePublicAnchors(player, publicAnchors);
         }
     }
     
-    public int setStackDepth(CommandContext<ServerCommandSource> context) {
+    public int setStackDepth(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
         stackDepth = IntegerArgumentType.getInteger(context, STACK_DEPTH.getKey());
-        return storeProperty(context.getSource(), STACK_DEPTH.getKey(), Integer.toString(stackDepth));
+        return storeProperty(player, STACK_DEPTH.getKey(), Integer.toString(stackDepth));
     }
     
-    public int setAnchorLimit(CommandContext<ServerCommandSource> context) {
+    public int setAnchorLimit(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
         anchorLimit = IntegerArgumentType.getInteger(context, ANCHOR_LIMIT.getKey());
-        return storeProperty(context.getSource(), ANCHOR_LIMIT.getKey(), Integer.toString(anchorLimit));
+        return storeProperty(player, ANCHOR_LIMIT.getKey(), Integer.toString(anchorLimit));
     }
     
-    public int setRequestTimeout(CommandContext<ServerCommandSource> context) {
+    public int setRequestTimeout(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
         requestTimeout = IntegerArgumentType.getInteger(context, REQUEST_TIMEOUT.getKey());
-        return storeProperty(context.getSource(), REQUEST_TIMEOUT.getKey(), Integer.toString(requestTimeout));
+        return storeProperty(player, REQUEST_TIMEOUT.getKey(), Integer.toString(requestTimeout));
     }
     
-    public int restoreDefault(CommandContext<ServerCommandSource> context) {
+    public int restoreDefault(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
         stackDepth = DEFAULT_STACK_DEPTH;
         anchorLimit = DEFAULT_ANCHOR_LIMIT;
         requestTimeout = DEFAULT_REQUEST_TIMEOUT;
         String[] keys = {STACK_DEPTH.getKey(), ANCHOR_LIMIT.getKey(), REQUEST_TIMEOUT.getKey()};
         String[] values = {Integer.toString(stackDepth), Integer.toString(anchorLimit), Integer.toString(requestTimeout)};
-        return restoreProperties(context.getSource(), keys, values);
+        return restoreProperties(player, keys, values);
     }
 }
