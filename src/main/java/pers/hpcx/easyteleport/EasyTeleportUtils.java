@@ -5,6 +5,8 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.text.TextContent;
@@ -70,11 +72,14 @@ public final class EasyTeleportUtils {
     public static void teleport(ServerPlayerEntity player, ServerPlayerEntity target) {
         Vec3d position = target.getPos();
         player.teleport(target.getServerWorld(), position.x, position.y, position.z, player.getYaw(), player.getPitch());
+        player.playSound(SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.PLAYERS, 1.0f, 1.0f);
+        target.playSound(SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.PLAYERS, 1.0f, 1.0f);
     }
     
     public static void teleport(ServerPlayerEntity player, TeleportAnchor anchor) {
         Vec3d position = anchor.position();
         player.teleport(player.getServer().getWorld(anchor.world()), position.x, position.y, position.z, player.getYaw(), player.getPitch());
+        player.playSound(SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.PLAYERS, 1.0f, 1.0f);
     }
     
     public static void send(ServerPlayerEntity player, boolean success, MutableText... texts) {
