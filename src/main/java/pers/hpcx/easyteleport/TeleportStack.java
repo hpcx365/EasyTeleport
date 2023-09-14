@@ -18,7 +18,7 @@ public class TeleportStack {
             send(player, false, gray("Cannot tpp anymore."));
             return 0;
         } else {
-            tpp(player, tppAnchors.removeFirst(), null, true, depth);
+            tpp(player, null, tppAnchors.removeFirst(), true, false, depth);
             return 1;
         }
     }
@@ -28,7 +28,7 @@ public class TeleportStack {
             send(player, false, gray("Cannot tpb anymore."));
             return 0;
         } else {
-            tpb(player, tpbAnchors.removeFirst(), null, true, depth);
+            tpb(player, null, tpbAnchors.removeFirst(), true, false, depth);
             return 1;
         }
     }
@@ -41,15 +41,19 @@ public class TeleportStack {
         tppAnchors.clear();
     }
     
-    public int tpp(ServerPlayerEntity player, String anchorName, int depth) {
+    public int tpp(ServerPlayerEntity player, EasyTeleportMod mod, String anchorName, int depth) {
         TeleportAnchor anchor = ((TeleportStorage) player).easyTeleport$getAnchors().get(anchorName);
-        if (anchor == null) {
-            send(player, false, gray("Anchor "), red(anchorName), gray(" not found."));
-            return 0;
-        } else {
-            tpp(player, anchor, anchorName, false, depth);
+        if (anchor != null) {
+            tpp(player, anchorName, anchor, false, false, depth);
             return 1;
         }
+        anchor = mod.publicAnchors.get(anchorName);
+        if (anchor != null) {
+            tpp(player, anchorName, anchor, false, true, depth);
+            return 1;
+        }
+        send(player, false, gray("Anchor "), red(anchorName), gray(" not found."));
+        return 0;
     }
     
     public void tpp(ServerPlayerEntity player, ServerPlayerEntity target, int depth) {
@@ -62,28 +66,28 @@ public class TeleportStack {
         send(target, true, player(player), green(" is teleported to you."));
     }
     
-    public void tpp(ServerPlayerEntity player, TeleportAnchor anchor, String name, boolean temp, int depth) {
+    public void tpp(ServerPlayerEntity player, String anchorName, TeleportAnchor anchor, boolean isTemp, boolean isPublic, int depth) {
         while (tpbAnchors.size() >= depth) {
             tpbAnchors.removeLast();
         }
         tpbAnchors.addFirst(new TeleportAnchor(player));
-        if (!temp) {
+        if (!isTemp) {
             tppAnchors.clear();
         }
         teleport(player, anchor);
-        send(player, true, green("Teleport to "), temp ? position(anchor.position()) : anchor(name, anchor), green("."));
+        send(player, true, green("Teleport to "), anchor(anchorName, anchor, isTemp, isPublic), green("."));
     }
     
-    public void tpb(ServerPlayerEntity player, TeleportAnchor anchor, String name, boolean temp, int depth) {
+    public void tpb(ServerPlayerEntity player, String anchorName, TeleportAnchor anchor, boolean isTemp, boolean isPublic, int depth) {
         while (tppAnchors.size() >= depth) {
             tppAnchors.removeLast();
         }
         tppAnchors.addFirst(new TeleportAnchor(player));
-        if (!temp) {
+        if (!isTemp) {
             tpbAnchors.clear();
         }
         teleport(player, anchor);
-        send(player, true, green("Teleport to "), temp ? position(anchor.position()) : anchor(name, anchor), green("."));
+        send(player, true, green("Teleport to "), anchor(anchorName, anchor, isTemp, isPublic), green("."));
     }
     
     public NbtCompound toCompound() {

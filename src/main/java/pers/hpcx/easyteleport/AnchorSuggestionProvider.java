@@ -12,10 +12,10 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-public class AnchorSuggestionProvider implements SuggestionProvider<ServerCommandSource> {
+public record AnchorSuggestionProvider(EasyTeleportMod mod) implements SuggestionProvider<ServerCommandSource> {
     
-    public static AnchorSuggestionProvider suggestions() {
-        return new AnchorSuggestionProvider();
+    public static AnchorSuggestionProvider suggestions(EasyTeleportMod mod) {
+        return new AnchorSuggestionProvider(mod);
     }
     
     @Override
@@ -23,12 +23,15 @@ public class AnchorSuggestionProvider implements SuggestionProvider<ServerComman
             throws CommandSyntaxException {
         ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
         Map<String, TeleportAnchor> anchors = ((TeleportStorage) player).easyTeleport$getAnchors();
-        if (!anchors.isEmpty()) {
-            ArrayList<String> anchorNames = new ArrayList<>(anchors.keySet());
-            anchorNames.sort(String::compareToIgnoreCase);
-            for (String anchorName : anchorNames) {
-                builder.suggest(anchorName);
-            }
+        ArrayList<String> anchorNames = new ArrayList<>(anchors.keySet());
+        ArrayList<String> publicAnchorNames = new ArrayList<>(mod.publicAnchors.keySet());
+        anchorNames.sort(String::compareToIgnoreCase);
+        publicAnchorNames.sort(String::compareToIgnoreCase);
+        for (String anchorName : anchorNames) {
+            builder.suggest(anchorName);
+        }
+        for (String anchorName : publicAnchorNames) {
+            builder.suggest(anchorName);
         }
         return builder.buildFuture();
     }

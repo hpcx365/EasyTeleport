@@ -15,6 +15,8 @@ import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.command.argument.GameProfileArgumentType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtIo;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -43,6 +45,7 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
     public int anchorLimit = DEFAULT_ANCHOR_LIMIT;
     public int requestTimeout = DEFAULT_REQUEST_TIMEOUT;
     
+    public final Map<String, TeleportAnchor> publicAnchors = new HashMap<>();
     public final Map<UUID, List<TeleportRequest>> tpRequests = new HashMap<>();
     public final Map<UUID, TeleportRequest> tpHereRequests = new HashMap<>();
     
@@ -69,6 +72,15 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
                     Properties properties = new Properties();
                     setProperties(properties);
                     properties.store(out, "easy-teleport mod config");
+                }
+            }
+        } catch (IOException ignored) {
+        }
+        try {
+            NbtCompound anchorData = NbtIo.read(ANCHOR_PATH.toFile());
+            if (anchorData != null) {
+                for (String anchorName : anchorData.getKeys()) {
+                    publicAnchors.put(anchorName, TeleportAnchor.fromCompound(anchorData.getCompound(anchorName)));
                 }
             }
         } catch (IOException ignored) {
@@ -140,7 +152,7 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
         dispatcher.register(literal("tpp").requires(isPlayer).executes(this::teleportReturn));
         
         dispatcher.register(literal("tpp").requires(isPlayer)
-                .then(argument("anchor-name", StringArgumentType.string()).suggests(AnchorSuggestionProvider.suggestions()).executes(this::teleport)));
+                .then(argument("anchor-name", StringArgumentType.string()).suggests(AnchorSuggestionProvider.suggestions(this)).executes(this::teleport)));
         
         dispatcher.register(
                 literal("tpa").requires(isPlayer).then(argument("target-player", GameProfileArgumentType.gameProfile()).executes(this::teleportRequest)));
@@ -165,7 +177,17 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
                 literal("anchor").requires(isPlayer).then(literal("set").then(argument("anchor-name", StringArgumentType.string()).executes(this::setAnchor))));
         
         dispatcher.register(literal("anchor").requires(isPlayer).then(literal("remove").then(
-                argument("anchor-name", StringArgumentType.string()).suggests(AnchorSuggestionProvider.suggestions()).executes(this::removeAnchor))));
+                argument("anchor-name", StringArgumentType.string()).suggests(AnchorSuggestionProvider.suggestions(this)).executes(this::removeAnchor))));
+        
+        dispatcher.register(literal("public").requires(isOperator).then(literal("list").executes(this::listPublicAnchors)));
+        
+        dispatcher.register(literal("public").requires(isOperator).then(literal("clear").executes(this::clearPublicAnchors)));
+        
+        dispatcher.register(literal("public").requires(isOperator)
+                .then(literal("set").then(argument("anchor-name", StringArgumentType.string()).executes(this::setPublicAnchor))));
+        
+        dispatcher.register(literal("public").requires(isOperator).then(literal("remove").then(
+                argument("anchor-name", StringArgumentType.string()).suggests(AnchorSuggestionProvider.suggestions(this)).executes(this::removePublicAnchor))));
         
         dispatcher.register(literal("config").requires(isOperator)
                 .then(literal("depth").then(argument(STACK_DEPTH.getKey(), STACK_DEPTH.getType()).executes(this::setStackDepth))));
@@ -190,7 +212,7 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
     public int teleport(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
         TeleportStack stack = ((TeleportStorage) player).easyTeleport$getStack();
-        return stack.tpp(player, StringArgumentType.getString(context, "anchor-name"), stackDepth);
+        return stack.tpp(player, this, StringArgumentType.getString(context, "anchor-name"), stackDepth);
     }
     
     public int teleportBack(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
@@ -321,7 +343,7 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
     public int home(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
         TeleportStack stack = ((TeleportStorage) player).easyTeleport$getStack();
-        return stack.tpp(player, "home", stackDepth);
+        return stack.tpp(player, this, "home", stackDepth);
     }
     
     public int setHome(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
@@ -390,6 +412,60 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
             return 0;
         } else {
             anchors.keySet().remove(anchorName);
+            send(player, true, green("Remove anchor "), anchor(anchorName, anchor), green("."));
+            return 1;
+        }
+    }
+    
+    public int listPublicAnchors(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
+        if (publicAnchors.isEmpty()) {
+            send(player, true, gray("No anchors set."));
+            return 0;
+        }
+        ArrayList<String> anchorNames = new ArrayList<>(publicAnchors.keySet());
+        anchorNames.sort(String::compareToIgnoreCase);
+        send(player, true, green("Anchors set by "), player(player), green(":"));
+        for (String anchorName : anchorNames) {
+            send(player, true, gray(" -"), anchor(anchorName, publicAnchors.get(anchorName)));
+        }
+        return 1;
+    }
+    
+    public int clearPublicAnchors(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
+        if (publicAnchors.isEmpty()) {
+            send(player, true, gray("No anchors set."));
+            return 0;
+        } else {
+            publicAnchors.clear();
+            send(player, true, green("Anchors cleared."));
+            return 1;
+        }
+    }
+    
+    public int setPublicAnchor(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
+        if (publicAnchors.size() >= anchorLimit) {
+            send(player, false, red("Anchor count limit exceeded."));
+            return 0;
+        }
+        String anchorName = StringArgumentType.getString(context, "anchor-name");
+        TeleportAnchor anchor = new TeleportAnchor(player);
+        publicAnchors.put(anchorName, anchor);
+        send(player, true, green("Set anchor "), anchor(anchorName, anchor), green("."));
+        return 1;
+    }
+    
+    public int removePublicAnchor(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
+        String anchorName = StringArgumentType.getString(context, "anchor-name");
+        TeleportAnchor anchor = publicAnchors.get(anchorName);
+        if (anchor == null) {
+            send(player, false, gray("Anchor "), red(anchorName), gray(" not found."));
+            return 0;
+        } else {
+            publicAnchors.keySet().remove(anchorName);
             send(player, true, green("Remove anchor "), anchor(anchorName, anchor), green("."));
             return 1;
         }

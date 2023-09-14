@@ -29,6 +29,7 @@ public final class EasyTeleportUtils {
     public static final String MOD_ID = "easyteleport";
     public static final String CONFIG_COMMENTS = "easy-teleport mod config";
     public static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve("easy-teleport.properties");
+    public static final Path ANCHOR_PATH = FabricLoader.getInstance().getGameDir().resolve("world").resolve("public-anchors.dat");
     
     private EasyTeleportUtils() {
     }
@@ -57,16 +58,23 @@ public final class EasyTeleportUtils {
         return Text.literal(str).formatted(GRAY);
     }
     
-    public static MutableText anchor(String anchorName, TeleportAnchor anchor) {
-        return yellow(anchorName).append(gray(" at ")).append(position(anchor.position()));
-    }
-    
     public static MutableText player(ServerPlayerEntity player) {
         return gold(player.getName().getString());
     }
     
     public static MutableText position(Vec3d position) {
         return gray("(%.02f, %.02f, %.02f)".formatted(position.x, position.y, position.z));
+    }
+    
+    public static MutableText anchor(String anchorName, TeleportAnchor anchor) {
+        return anchor(anchorName, anchor, false, false);
+    }
+    
+    public static MutableText anchor(String anchorName, TeleportAnchor anchor, boolean isTemp, boolean isPublic) {
+        if (isTemp) {
+            return position(anchor.position());
+        }
+        return (isPublic ? purple(anchorName) : yellow(anchorName)).append(gray(" at ")).append(position(anchor.position()));
     }
     
     public static void teleport(ServerPlayerEntity player, ServerPlayerEntity target) {
