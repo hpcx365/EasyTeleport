@@ -18,6 +18,8 @@ import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvents;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -229,6 +231,7 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
         requestList.add(new TeleportRequest(sourceID, targetID, requestTimeout / 50));
         send(sourcePlayer, true, green("Requested to teleport to "), player(targetPlayer), green("."));
         send(targetPlayer, true, player(sourcePlayer), green(" has requested to teleport to you. Type "), yellow("/tpaccept"), green(" to accept."));
+        targetPlayer.playSound(SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(), SoundCategory.PLAYERS, 1.0f, 1.0f);
         return 1;
     }
     
@@ -250,6 +253,7 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
         requests2.put(sourceID, new TeleportRequest(sourceID, targetID, requestTimeout / 50));
         send(sourcePlayer, true, player(targetPlayer), green(" has requested to teleport you to there. Type "), yellow("/tpaccept"), green(" to accept."));
         send(targetPlayer, true, green("Requested to teleport "), player(sourcePlayer), green(" to you."));
+        sourcePlayer.playSound(SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(), SoundCategory.PLAYERS, 1.0f, 1.0f);
         return 1;
     }
     
