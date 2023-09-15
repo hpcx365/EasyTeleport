@@ -141,6 +141,21 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
                 }
             }
         }
+        if (!shareRequests.isEmpty()) {
+            for (UUID targetID : shareRequests.keySet()) {
+                List<ShareRequest> requestList = shareRequests.get(targetID);
+                for (Iterator<ShareRequest> iterator = requestList.iterator(); iterator.hasNext(); ) {
+                    ShareRequest request = iterator.next();
+                    if (--request.keepAliveTicks <= 0) {
+                        iterator.remove();
+                        notifyRequestTimedOut(server, request.sourcePlayerID, request.targetPlayerID);
+                    }
+                }
+                if (requestList.isEmpty()) {
+                    shareRequests.keySet().remove(targetID);
+                }
+            }
+        }
     }
     
     @Override
