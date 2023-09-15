@@ -33,6 +33,14 @@ Made for servers! Clients don't have to install EasyTeleport to connect to the s
 
 `/anchor remove <anchor-name>` Remove an anchor.
 
+`/anchor share <anchor-name>` Share an anchor with all players.
+
+`/anchor share <anchor-name> <target-player>` Share an anchor with a player.
+
+`/anchor accept` Accept all received anchors.
+
+`/anchor accept <anchor-name>` Accept a received anchor.
+
 `/public list` List all public anchors.
 
 `/public clear` Remove all public anchors.
