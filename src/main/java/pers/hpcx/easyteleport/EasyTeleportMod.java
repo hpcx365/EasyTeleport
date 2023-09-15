@@ -171,15 +171,15 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
                 .then(argument("anchor-name", StringArgumentType.string()).suggests(AnchorSuggestionProvider.suggestions(this)).executes(this::teleport)));
         
         dispatcher.register(
-                literal("tpa").requires(isPlayer).then(argument("target-player", GameProfileArgumentType.gameProfile()).executes(this::teleportRequest)));
+                literal("tpa").requires(isPlayer).then(argument("target-player", GameProfileArgumentType.gameProfile()).executes(this::requestTeleport)));
+        
+        dispatcher.register(literal("tphere").requires(isPlayer)
+                .then(argument("source-player", GameProfileArgumentType.gameProfile()).executes(this::requestTeleportHere)));
+        
+        dispatcher.register(literal("tpaccept").requires(isPlayer).executes(this::acceptAllTeleport));
         
         dispatcher.register(
-                literal("tphere").requires(isPlayer).then(argument("source-player", GameProfileArgumentType.gameProfile()).executes(this::teleportHere)));
-        
-        dispatcher.register(literal("tpaccept").requires(isPlayer).executes(this::teleportAcceptAll));
-        
-        dispatcher.register(
-                literal("tpaccept").requires(isPlayer).then(argument("source-player", GameProfileArgumentType.gameProfile()).executes(this::teleportAccept)));
+                literal("tpaccept").requires(isPlayer).then(argument("source-player", GameProfileArgumentType.gameProfile()).executes(this::acceptTeleport)));
         
         dispatcher.register(literal("home").requires(isPlayer).executes(this::home));
         
@@ -194,6 +194,18 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
         
         dispatcher.register(literal("anchor").requires(isPlayer).then(literal("remove").then(
                 argument("anchor-name", StringArgumentType.string()).suggests(AnchorSuggestionProvider.suggestions(this)).executes(this::removeAnchor))));
+        
+        dispatcher.register(literal("anchor").requires(isPlayer).then(literal("share").then(
+                argument("anchor-name", StringArgumentType.string()).suggests(AnchorSuggestionProvider.suggestions(this)).executes(this::shareAnchorWithAll))));
+        
+        dispatcher.register(literal("anchor").requires(isPlayer).then(literal("share").then(
+                argument("anchor-name", StringArgumentType.string()).suggests(AnchorSuggestionProvider.suggestions(this))
+                        .then(argument("target-player", GameProfileArgumentType.gameProfile()).executes(this::shareAnchor)))));
+        
+        dispatcher.register(literal("anchor").requires(isPlayer).then(literal("accept").executes(this::acceptAllAnchors)));
+        
+        dispatcher.register(literal("anchor").requires(isPlayer)
+                .then(literal("accept").then(argument("anchor-name", StringArgumentType.string()).executes(this::acceptAnchor))));
         
         dispatcher.register(literal("public").requires(isOperator).then(literal("list").executes(this::listPublicAnchors)));
         
@@ -244,7 +256,7 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
         return stack.tpp(player, stackDepth);
     }
     
-    public int teleportRequest(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+    public int requestTeleport(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         ServerPlayerEntity sourcePlayer = context.getSource().getPlayerOrThrow();
         Collection<GameProfile> profiles = GameProfileArgumentType.getProfileArgument(context, "target-player");
         UUID sourceID = sourcePlayer.getUuid();
@@ -272,7 +284,7 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
         return 1;
     }
     
-    public int teleportHere(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+    public int requestTeleportHere(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         ServerPlayerEntity targetPlayer = context.getSource().getPlayerOrThrow();
         Collection<GameProfile> profiles = GameProfileArgumentType.getProfileArgument(context, "source-player");
         UUID targetID = targetPlayer.getUuid();
@@ -294,7 +306,7 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
         return 1;
     }
     
-    public int teleportAccept(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+    public int acceptTeleport(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         ServerPlayerEntity targetPlayer = context.getSource().getPlayerOrThrow();
         Collection<GameProfile> profiles = GameProfileArgumentType.getProfileArgument(context, "source-player");
         UUID sourceID = selectPlayerID(targetPlayer, profiles);
@@ -326,7 +338,7 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
         return 0;
     }
     
-    public int teleportAcceptAll(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+    public int acceptAllTeleport(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
         UUID playerID = player.getUuid();
         List<TeleportRequest> tpRequestList = tpRequests.get(playerID);
@@ -432,6 +444,134 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
             send(player, true, green("Remove anchor "), anchor(anchorName, anchor), green("."));
             return 1;
         }
+    }
+    
+    public int shareAnchor(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        ServerPlayerEntity sourcePlayer = context.getSource().getPlayerOrThrow();
+        Map<String, TeleportAnchor> anchors = ((TeleportStorage) sourcePlayer).easyTeleport$getAnchors();
+        String anchorName = StringArgumentType.getString(context, "anchor-name");
+        TeleportAnchor anchor = anchors.get(anchorName);
+        if (anchor == null) {
+            send(sourcePlayer, false, gray("Anchor "), red(anchorName), gray(" not found."));
+            return 0;
+        }
+        Collection<GameProfile> profiles = GameProfileArgumentType.getProfileArgument(context, "target-player");
+        UUID sourceID = sourcePlayer.getUuid();
+        UUID targetID = selectPlayerID(sourcePlayer, profiles);
+        ServerPlayerEntity targetPlayer = sourcePlayer.getServer().getPlayerManager().getPlayer(targetID);
+        if (targetPlayer == null) {
+            playerNotFound(sourcePlayer);
+            return 0;
+        }
+        List<ShareRequest> requestList = shareRequests.get(targetID);
+        if (requestList == null) {
+            shareRequests.put(targetID, requestList = new ArrayList<>());
+        } else {
+            for (ShareRequest request : requestList) {
+                if (request.anchorName.equals(anchorName)) {
+                    send(sourcePlayer, false, player(targetPlayer), gray(" has already received an anchor named "), yellow(anchorName), gray("."));
+                    return 0;
+                }
+            }
+        }
+        requestList.add(new ShareRequest(requestTimeout / 50, sourceID, targetID, anchorName, anchor));
+        send(sourcePlayer, true, green("Requested to share anchor with "), player(targetPlayer), green("."));
+        send(targetPlayer, true, player(sourcePlayer), green(" has requested to share "), anchor(anchorName, anchor), green(" with you. Type "),
+                yellow("/anchor accept"), green(" to accept."));
+        targetPlayer.playSound(SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(), SoundCategory.PLAYERS, 1.0f, 1.0f);
+        return 1;
+    }
+    
+    public int shareAnchorWithAll(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        ServerPlayerEntity sourcePlayer = context.getSource().getPlayerOrThrow();
+        Map<String, TeleportAnchor> anchors = ((TeleportStorage) sourcePlayer).easyTeleport$getAnchors();
+        String anchorName = StringArgumentType.getString(context, "anchor-name");
+        TeleportAnchor anchor = anchors.get(anchorName);
+        if (anchor == null) {
+            send(sourcePlayer, false, gray("Anchor "), red(anchorName), gray(" not found."));
+            return 0;
+        }
+        for (ServerPlayerEntity targetPlayer : sourcePlayer.getServer().getPlayerManager().getPlayerList()) {
+            UUID sourceID = sourcePlayer.getUuid();
+            UUID targetID = targetPlayer.getUuid();
+            if (sourceID.equals(targetID)) {
+                continue;
+            }
+            List<ShareRequest> requestList = shareRequests.get(targetID);
+            if (requestList == null) {
+                shareRequests.put(targetID, requestList = new ArrayList<>());
+            } else {
+                boolean hasRequest = false;
+                for (ShareRequest request : requestList) {
+                    if (request.anchorName.equals(anchorName)) {
+                        hasRequest = true;
+                        break;
+                    }
+                }
+                if (hasRequest) {
+                    send(sourcePlayer, false, player(targetPlayer), gray(" has already received an anchor named "), yellow(anchorName), gray("."));
+                    continue;
+                }
+            }
+            requestList.add(new ShareRequest(requestTimeout / 50, sourceID, targetID, anchorName, anchor));
+            send(sourcePlayer, true, green("Requested to share anchor with "), player(targetPlayer), green("."));
+            send(targetPlayer, true, player(sourcePlayer), green(" has requested to share "), anchor(anchorName, anchor), green(" with you. Type "),
+                    yellow("/anchor accept"), green(" to accept."));
+            targetPlayer.playSound(SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(), SoundCategory.PLAYERS, 1.0f, 1.0f);
+        }
+        return 1;
+    }
+    
+    public int acceptAnchor(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        ServerPlayerEntity targetPlayer = context.getSource().getPlayerOrThrow();
+        Map<String, TeleportAnchor> anchors = ((TeleportStorage) targetPlayer).easyTeleport$getAnchors();
+        String anchorName = StringArgumentType.getString(context, "anchor-name");
+        List<ShareRequest> requestList = shareRequests.get(targetPlayer.getUuid());
+        if (requestList == null || requestList.isEmpty()) {
+            send(targetPlayer, false, gray("You have no request to accept."));
+            return 0;
+        }
+        for (Iterator<ShareRequest> iterator = requestList.iterator(); iterator.hasNext(); ) {
+            ShareRequest request = iterator.next();
+            if (!request.anchorName.equals(anchorName)) {
+                continue;
+            }
+            if (anchors.size() >= anchorLimit) {
+                send(targetPlayer, false, red("Anchor count limit exceeded."));
+            } else {
+                anchors.put(request.anchorName, request.anchor);
+                send(targetPlayer, true, green("Accepted anchor "), anchor(request.anchorName, request.anchor), green("."));
+            }
+            iterator.remove();
+            if (requestList.isEmpty()) {
+                shareRequests.keySet().remove(targetPlayer.getUuid());
+            }
+            return 1;
+        }
+        send(targetPlayer, false, gray("Anchor "), red(anchorName), gray(" not found."));
+        return 0;
+    }
+    
+    public int acceptAllAnchors(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+        ServerPlayerEntity targetPlayer = context.getSource().getPlayerOrThrow();
+        Map<String, TeleportAnchor> anchors = ((TeleportStorage) targetPlayer).easyTeleport$getAnchors();
+        List<ShareRequest> requestList = shareRequests.get(targetPlayer.getUuid());
+        if (requestList == null || requestList.isEmpty()) {
+            send(targetPlayer, false, gray("You have no request to accept."));
+            return 0;
+        }
+        for (ShareRequest request : requestList) {
+            if (anchors.size() >= anchorLimit) {
+                send(targetPlayer, false, red("Anchor count limit exceeded."));
+                break;
+            } else {
+                anchors.put(request.anchorName, request.anchor);
+                send(targetPlayer, true, green("Accepted anchor "), anchor(request.anchorName, request.anchor), green("."));
+            }
+        }
+        requestList.clear();
+        shareRequests.keySet().remove(targetPlayer.getUuid());
+        return 1;
     }
     
     public int listPublicAnchors(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {

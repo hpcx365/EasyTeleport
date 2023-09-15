@@ -109,7 +109,7 @@ public final class EasyTeleportUtils {
     }
     
     public static void playerNotFound(ServerPlayerEntity player) {
-        send(player, false, red("Player not found."));
+        send(player, false, gray("Player not found."));
     }
     
     public static UUID selectPlayerID(ServerPlayerEntity player, Collection<GameProfile> profiles) {
