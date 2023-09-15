@@ -39,7 +39,7 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
     
     public static final int DEFAULT_STACK_DEPTH = 8;
     public static final int DEFAULT_ANCHOR_LIMIT = 16;
-    public static final int DEFAULT_REQUEST_TIMEOUT = 10000;
+    public static final int DEFAULT_REQUEST_TIMEOUT = 20000;
     
     public int stackDepth = DEFAULT_STACK_DEPTH;
     public int anchorLimit = DEFAULT_ANCHOR_LIMIT;
