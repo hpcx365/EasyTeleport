@@ -48,6 +48,7 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
     public final Map<String, TeleportAnchor> publicAnchors = new HashMap<>();
     public final Map<UUID, List<TeleportRequest>> tpRequests = new HashMap<>();
     public final Map<UUID, TeleportRequest> tpHereRequests = new HashMap<>();
+    public final Map<UUID, List<ShareRequest>> shareRequests = new HashMap<>();
     
     @Override
     public void onInitialize() {
@@ -249,7 +250,7 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
                 }
             }
         }
-        requestList.add(new TeleportRequest(sourceID, targetID, requestTimeout / 50));
+        requestList.add(new TeleportRequest(requestTimeout / 50, sourceID, targetID));
         send(sourcePlayer, true, green("Requested to teleport to "), player(targetPlayer), green("."));
         send(targetPlayer, true, player(sourcePlayer), green(" has requested to teleport to you. Type "), yellow("/tpaccept"), green(" to accept."));
         targetPlayer.playSound(SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(), SoundCategory.PLAYERS, 1.0f, 1.0f);
@@ -271,7 +272,7 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
             send(targetPlayer, false, player(sourcePlayer), gray(" has already received a request."));
             return 0;
         }
-        tpHereRequests.put(sourceID, new TeleportRequest(sourceID, targetID, requestTimeout / 50));
+        tpHereRequests.put(sourceID, new TeleportRequest(requestTimeout / 50, sourceID, targetID));
         send(sourcePlayer, true, player(targetPlayer), green(" has requested to teleport you to there. Type "), yellow("/tpaccept"), green(" to accept."));
         send(targetPlayer, true, green("Requested to teleport "), player(sourcePlayer), green(" to you."));
         sourcePlayer.playSound(SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(), SoundCategory.PLAYERS, 1.0f, 1.0f);
