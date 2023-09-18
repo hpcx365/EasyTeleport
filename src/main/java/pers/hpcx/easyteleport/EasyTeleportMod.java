@@ -118,41 +118,41 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
     @Override
     public void onEndTick(MinecraftServer server) {
         if (!tpRequests.isEmpty()) {
-            for (UUID targetID : tpRequests.keySet()) {
-                List<TeleportRequest> requestList = tpRequests.get(targetID);
-                for (Iterator<TeleportRequest> iterator = requestList.iterator(); iterator.hasNext(); ) {
-                    TeleportRequest request = iterator.next();
+            for (Iterator<Map.Entry<UUID, List<TeleportRequest>>> entryIterator = tpRequests.entrySet().iterator(); entryIterator.hasNext(); ) {
+                List<TeleportRequest> requestList = entryIterator.next().getValue();
+                for (Iterator<TeleportRequest> requestIterator = requestList.iterator(); requestIterator.hasNext(); ) {
+                    TeleportRequest request = requestIterator.next();
                     if (--request.keepAliveTicks <= 0) {
-                        iterator.remove();
-                        notifyRequestTimedOut(server, request.sourcePlayerID, request.targetPlayerID);
+                        requestIterator.remove();
+                        notifyRequestTimedOut("Teleport", server, request.sourcePlayerID, request.targetPlayerID);
                     }
                 }
                 if (requestList.isEmpty()) {
-                    tpRequests.keySet().remove(targetID);
+                    entryIterator.remove();
                 }
             }
         }
         if (!tpHereRequests.isEmpty()) {
-            for (Iterator<UUID> iterator = tpHereRequests.keySet().iterator(); iterator.hasNext(); ) {
-                TeleportRequest request = tpHereRequests.get(iterator.next());
+            for (Iterator<Map.Entry<UUID, TeleportRequest>> entryIterator = tpHereRequests.entrySet().iterator(); entryIterator.hasNext(); ) {
+                TeleportRequest request = entryIterator.next().getValue();
                 if (--request.keepAliveTicks <= 0) {
-                    iterator.remove();
-                    notifyRequestTimedOut(server, request.sourcePlayerID, request.targetPlayerID);
+                    entryIterator.remove();
+                    notifyRequestTimedOut("Teleport here", server, request.sourcePlayerID, request.targetPlayerID);
                 }
             }
         }
         if (!shareRequests.isEmpty()) {
-            for (UUID targetID : shareRequests.keySet()) {
-                List<ShareRequest> requestList = shareRequests.get(targetID);
-                for (Iterator<ShareRequest> iterator = requestList.iterator(); iterator.hasNext(); ) {
-                    ShareRequest request = iterator.next();
+            for (Iterator<Map.Entry<UUID, List<ShareRequest>>> entryIterator = shareRequests.entrySet().iterator(); entryIterator.hasNext(); ) {
+                List<ShareRequest> requestList = entryIterator.next().getValue();
+                for (Iterator<ShareRequest> requestIterator = requestList.iterator(); requestIterator.hasNext(); ) {
+                    ShareRequest request = requestIterator.next();
                     if (--request.keepAliveTicks <= 0) {
-                        iterator.remove();
-                        notifyRequestTimedOut(server, request.sourcePlayerID, request.targetPlayerID);
+                        requestIterator.remove();
+                        notifyRequestTimedOut("Anchor share", server, request.sourcePlayerID, request.targetPlayerID);
                     }
                 }
                 if (requestList.isEmpty()) {
-                    shareRequests.keySet().remove(targetID);
+                    entryIterator.remove();
                 }
             }
         }

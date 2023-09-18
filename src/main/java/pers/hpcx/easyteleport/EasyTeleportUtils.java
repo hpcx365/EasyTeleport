@@ -134,12 +134,12 @@ public final class EasyTeleportUtils {
         return id;
     }
     
-    public static void notifyRequestTimedOut(MinecraftServer server, UUID sourceID, UUID targetID) {
+    public static void notifyRequestTimedOut(String request, MinecraftServer server, UUID sourceID, UUID targetID) {
         ServerPlayerEntity source = server.getPlayerManager().getPlayer(sourceID);
         ServerPlayerEntity target = server.getPlayerManager().getPlayer(targetID);
         if (source != null && target != null) {
-            send(source, true, gray("Teleport request to "), player(target), gray(" has timed out."));
-            send(target, true, gray("Teleport request from "), player(source), gray(" has timed out."));
+            send(source, true, gray(request + " request to "), player(target), gray(" has timed out."));
+            send(target, true, gray(request + " request from "), player(source), gray(" has timed out."));
         }
     }
     
