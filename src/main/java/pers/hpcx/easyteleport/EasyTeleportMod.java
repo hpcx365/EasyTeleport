@@ -34,8 +34,9 @@ import static net.minecraft.server.command.CommandManager.*;
 import static pers.hpcx.easyteleport.EasyTeleportConfig.*;
 import static pers.hpcx.easyteleport.EasyTeleportUtils.*;
 
-public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.ServerStarting, ServerTickEvents.EndTick, ServerLivingEntityEvents.AfterDeath,
-        CommandRegistrationCallback {
+public class EasyTeleportMod
+        implements ModInitializer, ServerLifecycleEvents.ServerStarting, ServerTickEvents.EndTick, ServerLivingEntityEvents.AfterDeath,
+                   CommandRegistrationCallback {
     
     public static final int DEFAULT_STACK_DEPTH = 8;
     public static final int DEFAULT_ANCHOR_LIMIT = 16;
@@ -118,7 +119,8 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
     @Override
     public void onEndTick(MinecraftServer server) {
         if (!tpRequests.isEmpty()) {
-            for (Iterator<Map.Entry<UUID, List<TeleportRequest>>> entryIterator = tpRequests.entrySet().iterator(); entryIterator.hasNext(); ) {
+            for (Iterator<Map.Entry<UUID, List<TeleportRequest>>> entryIterator = tpRequests.entrySet().iterator();
+                 entryIterator.hasNext(); ) {
                 List<TeleportRequest> requestList = entryIterator.next().getValue();
                 for (Iterator<TeleportRequest> requestIterator = requestList.iterator(); requestIterator.hasNext(); ) {
                     TeleportRequest request = requestIterator.next();
@@ -133,7 +135,8 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
             }
         }
         if (!tpHereRequests.isEmpty()) {
-            for (Iterator<Map.Entry<UUID, TeleportRequest>> entryIterator = tpHereRequests.entrySet().iterator(); entryIterator.hasNext(); ) {
+            for (Iterator<Map.Entry<UUID, TeleportRequest>> entryIterator = tpHereRequests.entrySet().iterator();
+                 entryIterator.hasNext(); ) {
                 TeleportRequest request = entryIterator.next().getValue();
                 if (--request.keepAliveTicks <= 0) {
                     entryIterator.remove();
@@ -142,7 +145,8 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
             }
         }
         if (!shareRequests.isEmpty()) {
-            for (Iterator<Map.Entry<UUID, List<ShareRequest>>> entryIterator = shareRequests.entrySet().iterator(); entryIterator.hasNext(); ) {
+            for (Iterator<Map.Entry<UUID, List<ShareRequest>>> entryIterator = shareRequests.entrySet().iterator();
+                 entryIterator.hasNext(); ) {
                 List<ShareRequest> requestList = entryIterator.next().getValue();
                 for (Iterator<ShareRequest> requestIterator = requestList.iterator(); requestIterator.hasNext(); ) {
                     ShareRequest request = requestIterator.next();
@@ -159,7 +163,8 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
     }
     
     @Override
-    public void register(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess, RegistrationEnvironment environment) {
+    public void register(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess,
+                         RegistrationEnvironment environment) {
         Predicate<ServerCommandSource> isPlayer = ServerCommandSource::isExecutedByPlayer;
         Predicate<ServerCommandSource> isOperator = source -> source.hasPermissionLevel(4);
         
@@ -167,19 +172,22 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
         
         dispatcher.register(literal("tpp").requires(isPlayer).executes(this::teleportReturn));
         
-        dispatcher.register(literal("tpp").requires(isPlayer)
-                .then(argument("anchor-name", StringArgumentType.string()).suggests(AnchorSuggestionProvider.suggestions(this)).executes(this::teleport)));
+        dispatcher.register(literal("tpp").requires(isPlayer).then(argument("anchor-name", StringArgumentType.string()).suggests(
+                AnchorSuggestionProvider.suggestions(this)).executes(this::teleport)));
         
-        dispatcher.register(
-                literal("tpa").requires(isPlayer).then(argument("target-player", GameProfileArgumentType.gameProfile()).executes(this::requestTeleport)));
+        dispatcher.register(literal("tpa").requires(isPlayer)
+                                          .then(argument("target-player", GameProfileArgumentType.gameProfile()).executes(
+                                                  this::requestTeleport)));
         
         dispatcher.register(literal("tphere").requires(isPlayer)
-                .then(argument("source-player", GameProfileArgumentType.gameProfile()).executes(this::requestTeleportHere)));
+                                             .then(argument("source-player", GameProfileArgumentType.gameProfile()).executes(
+                                                     this::requestTeleportHere)));
         
         dispatcher.register(literal("tpaccept").requires(isPlayer).executes(this::acceptAllTeleport));
         
-        dispatcher.register(
-                literal("tpaccept").requires(isPlayer).then(argument("source-player", GameProfileArgumentType.gameProfile()).executes(this::acceptTeleport)));
+        dispatcher.register(literal("tpaccept").requires(isPlayer)
+                                               .then(argument("source-player", GameProfileArgumentType.gameProfile()).executes(
+                                                       this::acceptTeleport)));
         
         dispatcher.register(literal("home").requires(isPlayer).executes(this::home));
         
@@ -189,43 +197,47 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
         
         dispatcher.register(literal("anchor").requires(isPlayer).then(literal("clear").executes(this::clearAnchors)));
         
-        dispatcher.register(
-                literal("anchor").requires(isPlayer).then(literal("set").then(argument("anchor-name", StringArgumentType.string()).executes(this::setAnchor))));
+        dispatcher.register(literal("anchor").requires(isPlayer).then(literal("set").then(
+                argument("anchor-name", StringArgumentType.string()).executes(this::setAnchor))));
         
         dispatcher.register(literal("anchor").requires(isPlayer).then(literal("remove").then(
-                argument("anchor-name", StringArgumentType.string()).suggests(AnchorSuggestionProvider.suggestions(this)).executes(this::removeAnchor))));
-        
-        dispatcher.register(literal("anchor").requires(isPlayer).then(literal("share").then(
-                argument("anchor-name", StringArgumentType.string()).suggests(AnchorSuggestionProvider.suggestions(this)).executes(this::shareAnchorWithAll))));
+                argument("anchor-name", StringArgumentType.string()).suggests(AnchorSuggestionProvider.suggestions(this))
+                                                                    .executes(this::removeAnchor))));
         
         dispatcher.register(literal("anchor").requires(isPlayer).then(literal("share").then(
                 argument("anchor-name", StringArgumentType.string()).suggests(AnchorSuggestionProvider.suggestions(this))
-                        .then(argument("target-player", GameProfileArgumentType.gameProfile()).executes(this::shareAnchor)))));
+                                                                    .executes(this::shareAnchorWithAll))));
+        
+        dispatcher.register(literal("anchor").requires(isPlayer).then(literal("share").then(
+                argument("anchor-name", StringArgumentType.string()).suggests(AnchorSuggestionProvider.suggestions(this))
+                                                                    .then(argument("target-player",
+                                                                                   GameProfileArgumentType.gameProfile()).executes(
+                                                                            this::shareAnchor)))));
         
         dispatcher.register(literal("anchor").requires(isPlayer).then(literal("accept").executes(this::acceptAllAnchors)));
         
-        dispatcher.register(literal("anchor").requires(isPlayer)
-                .then(literal("accept").then(argument("anchor-name", StringArgumentType.string()).executes(this::acceptAnchor))));
+        dispatcher.register(literal("anchor").requires(isPlayer).then(literal("accept").then(
+                argument("anchor-name", StringArgumentType.string()).executes(this::acceptAnchor))));
         
         dispatcher.register(literal("public").requires(isOperator).then(literal("list").executes(this::listPublicAnchors)));
         
         dispatcher.register(literal("public").requires(isOperator).then(literal("clear").executes(this::clearPublicAnchors)));
         
-        dispatcher.register(literal("public").requires(isOperator)
-                .then(literal("set").then(argument("anchor-name", StringArgumentType.string()).executes(this::setPublicAnchor))));
+        dispatcher.register(literal("public").requires(isOperator).then(literal("set").then(
+                argument("anchor-name", StringArgumentType.string()).executes(this::setPublicAnchor))));
         
         dispatcher.register(literal("public").requires(isOperator).then(literal("remove").then(
                 argument("anchor-name", StringArgumentType.string()).suggests(PublicAnchorSuggestionProvider.suggestions(this))
-                        .executes(this::removePublicAnchor))));
+                                                                    .executes(this::removePublicAnchor))));
         
-        dispatcher.register(literal("config").requires(isOperator)
-                .then(literal("depth").then(argument(STACK_DEPTH.getKey(), STACK_DEPTH.getType()).executes(this::setStackDepth))));
+        dispatcher.register(literal("config").requires(isOperator).then(literal("depth").then(
+                argument(STACK_DEPTH.getKey(), STACK_DEPTH.getType()).executes(this::setStackDepth))));
         
-        dispatcher.register(literal("config").requires(isOperator)
-                .then(literal("limit").then(argument(ANCHOR_LIMIT.getKey(), ANCHOR_LIMIT.getType()).executes(this::setAnchorLimit))));
+        dispatcher.register(literal("config").requires(isOperator).then(literal("limit").then(
+                argument(ANCHOR_LIMIT.getKey(), ANCHOR_LIMIT.getType()).executes(this::setAnchorLimit))));
         
-        dispatcher.register(literal("config").requires(isOperator)
-                .then(literal("timeout").then(argument(REQUEST_TIMEOUT.getKey(), REQUEST_TIMEOUT.getType()).executes(this::setRequestTimeout))));
+        dispatcher.register(literal("config").requires(isOperator).then(literal("timeout").then(
+                argument(REQUEST_TIMEOUT.getKey(), REQUEST_TIMEOUT.getType()).executes(this::setRequestTimeout))));
         
         dispatcher.register(literal("config").requires(isOperator).then(literal("default").executes(this::restoreDefault)));
     }
@@ -279,7 +291,8 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
         }
         requestList.add(new TeleportRequest(requestTimeout / 50, sourceID, targetID));
         send(sourcePlayer, true, green("Requested to teleport to "), player(targetPlayer), green("."));
-        send(targetPlayer, true, player(sourcePlayer), green(" has requested to teleport to you. Type "), yellow("/tpaccept"), green(" to accept."));
+        send(targetPlayer, true, player(sourcePlayer), green(" has requested to teleport to you. Type "), yellow("/tpaccept"),
+             green(" to accept."));
         targetPlayer.playSound(SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(), SoundCategory.PLAYERS, 1.0f, 1.0f);
         return 1;
     }
@@ -300,7 +313,8 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
             return 0;
         }
         tpHereRequests.put(sourceID, new TeleportRequest(requestTimeout / 50, sourceID, targetID));
-        send(sourcePlayer, true, player(targetPlayer), green(" has requested to teleport you to there. Type "), yellow("/tpaccept"), green(" to accept."));
+        send(sourcePlayer, true, player(targetPlayer), green(" has requested to teleport you to there. Type "), yellow("/tpaccept"),
+             green(" to accept."));
         send(targetPlayer, true, green("Requested to teleport "), player(sourcePlayer), green(" to you."));
         sourcePlayer.playSound(SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(), SoundCategory.PLAYERS, 1.0f, 1.0f);
         return 1;
@@ -469,15 +483,16 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
         } else {
             for (ShareRequest request : requestList) {
                 if (request.anchorName.equals(anchorName)) {
-                    send(sourcePlayer, false, player(targetPlayer), gray(" has already received an anchor named "), yellow(anchorName), gray("."));
+                    send(sourcePlayer, false, player(targetPlayer), gray(" has already received an anchor named "), yellow(anchorName),
+                         gray("."));
                     return 0;
                 }
             }
         }
         requestList.add(new ShareRequest(requestTimeout / 50, sourceID, targetID, anchorName, anchor));
         send(sourcePlayer, true, green("Requested to share anchor with "), player(targetPlayer), green("."));
-        send(targetPlayer, true, player(sourcePlayer), green(" has requested to share "), anchor(anchorName, anchor), green(" with you. Type "),
-                yellow("/anchor accept"), green(" to accept."));
+        send(targetPlayer, true, player(sourcePlayer), green(" has requested to share "), anchor(anchorName, anchor),
+             green(" with you. Type "), yellow("/anchor accept"), green(" to accept."));
         targetPlayer.playSound(SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(), SoundCategory.PLAYERS, 1.0f, 1.0f);
         return 1;
     }
@@ -509,14 +524,15 @@ public class EasyTeleportMod implements ModInitializer, ServerLifecycleEvents.Se
                     }
                 }
                 if (hasRequest) {
-                    send(sourcePlayer, false, player(targetPlayer), gray(" has already received an anchor named "), yellow(anchorName), gray("."));
+                    send(sourcePlayer, false, player(targetPlayer), gray(" has already received an anchor named "), yellow(anchorName),
+                         gray("."));
                     continue;
                 }
             }
             requestList.add(new ShareRequest(requestTimeout / 50, sourceID, targetID, anchorName, anchor));
             send(sourcePlayer, true, green("Requested to share anchor with "), player(targetPlayer), green("."));
-            send(targetPlayer, true, player(sourcePlayer), green(" has requested to share "), anchor(anchorName, anchor), green(" with you. Type "),
-                    yellow("/anchor accept"), green(" to accept."));
+            send(targetPlayer, true, player(sourcePlayer), green(" has requested to share "), anchor(anchorName, anchor),
+                 green(" with you. Type "), yellow("/anchor accept"), green(" to accept."));
             targetPlayer.playSound(SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(), SoundCategory.PLAYERS, 1.0f, 1.0f);
         }
         return 1;

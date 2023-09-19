@@ -85,7 +85,8 @@ public final class EasyTeleportUtils {
     
     public static void teleport(ServerPlayerEntity player, TeleportAnchor anchor) {
         Vec3d position = anchor.position();
-        player.teleport(player.getServer().getWorld(anchor.world()), position.x, position.y, position.z, player.getYaw(), player.getPitch());
+        player.teleport(player.getServer().getWorld(anchor.world()), position.x, position.y, position.z, player.getYaw(),
+                        player.getPitch());
         player.playSound(SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.PLAYERS, 1.0f, 1.0f);
     }
     
