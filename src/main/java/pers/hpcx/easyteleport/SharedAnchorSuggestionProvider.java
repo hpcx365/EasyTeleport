@@ -12,9 +12,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-public record SharedAnchorSuggestionProvider(EasyTeleportMod mod) implements SuggestionProvider<ServerCommandSource> {
+public record SharedAnchorSuggestionProvider(EasyTeleport mod) implements SuggestionProvider<ServerCommandSource> {
     
-    public static SharedAnchorSuggestionProvider suggestions(EasyTeleportMod mod) {
+    public static SharedAnchorSuggestionProvider suggestions(EasyTeleport mod) {
         return new SharedAnchorSuggestionProvider(mod);
     }
     

@@ -41,7 +41,7 @@ public class TeleportStack {
         tppAnchors.clear();
     }
     
-    public int tpp(ServerPlayerEntity player, EasyTeleportMod mod, String anchorName, int depth) {
+    public int tpp(ServerPlayerEntity player, EasyTeleport mod, String anchorName, int depth) {
         TeleportAnchor anchor = ((TeleportStorage) player).easyTeleport$getAnchors().get(anchorName);
         if (anchor != null) {
             tpp(player, anchorName, anchor, false, false, depth);

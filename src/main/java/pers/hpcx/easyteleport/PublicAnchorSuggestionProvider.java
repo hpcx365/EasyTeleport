@@ -9,9 +9,9 @@ import net.minecraft.server.command.ServerCommandSource;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 
-public record PublicAnchorSuggestionProvider(EasyTeleportMod mod) implements SuggestionProvider<ServerCommandSource> {
+public record PublicAnchorSuggestionProvider(EasyTeleport mod) implements SuggestionProvider<ServerCommandSource> {
     
-    public static PublicAnchorSuggestionProvider suggestions(EasyTeleportMod mod) {
+    public static PublicAnchorSuggestionProvider suggestions(EasyTeleport mod) {
         return new PublicAnchorSuggestionProvider(mod);
     }
     

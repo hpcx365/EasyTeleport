@@ -34,7 +34,7 @@ import static net.minecraft.server.command.CommandManager.*;
 import static pers.hpcx.easyteleport.EasyTeleportConfig.*;
 import static pers.hpcx.easyteleport.EasyTeleportUtils.*;
 
-public class EasyTeleportMod
+public class EasyTeleport
         implements ModInitializer, ServerLifecycleEvents.ServerStarting, ServerTickEvents.EndTick, ServerLivingEntityEvents.AfterDeath,
                    CommandRegistrationCallback {
     
