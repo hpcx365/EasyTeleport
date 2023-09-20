@@ -73,7 +73,7 @@ public class EasyTeleport
                 try (OutputStream out = Files.newOutputStream(CONFIG_PATH)) {
                     Properties properties = new Properties();
                     setProperties(properties);
-                    properties.store(out, "easy-teleport mod config");
+                    properties.store(out, CONFIG_COMMENTS);
                 }
             }
         } catch (IOException ignored) {
