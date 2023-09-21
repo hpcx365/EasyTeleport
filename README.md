@@ -64,12 +64,3 @@ Made for servers! Clients don't have to install EasyTeleport to connect to the s
 [EasyTeleport](https://github.com/LittleAmber2005/EasyTeleport)
 
 [LittleAmber2005](https://github.com/LittleAmber2005)
-
-## License Statements
-
-### Fiber
-
-EasyTeleport depends on and includes [Fiber](https://github.com/FabLabsMC/fiber), a Fabric configuration library, which
-is licensed under the [Apache License 2.0](https://github.com/FabLabsMC/fiber/blob/master/LICENSE).
-
-Fiber is Copyright FabLabsMC. No modifications were made to the original source.
