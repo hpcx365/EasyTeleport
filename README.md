@@ -58,9 +58,3 @@ Made for servers! Clients don't have to install EasyTeleport to connect to the s
 `/config default` Restore all default values.
 
 `stack-depth`, `anchor-limit` and `request-timeout` can be set in **_easy-teleport.properties_** as well.
-
-## Github
-
-[EasyTeleport](https://github.com/LittleAmber2005/EasyTeleport)
-
-[LittleAmber2005](https://github.com/LittleAmber2005)
