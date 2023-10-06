@@ -51,6 +51,8 @@ public class EasyTeleport
     public final Map<UUID, TeleportRequest> tpHereRequests = new HashMap<>();
     public final Map<UUID, List<ShareRequest>> shareRequests = new HashMap<>();
     
+    private static final Logger LOGGER = LogUtils.getLogger();
+    
     @Override
     public void onInitialize() {
         ServerLifecycleEvents.SERVER_STARTING.register(this);
@@ -107,15 +109,9 @@ public class EasyTeleport
     }
     
     public void setProperties(Properties properties) {
-        if (stackDepth != DEFAULT_STACK_DEPTH) {
-            properties.setProperty(STACK_DEPTH.getKey(), Integer.toString(stackDepth));
-        }
-        if (anchorLimit != DEFAULT_ANCHOR_LIMIT) {
-            properties.setProperty(ANCHOR_LIMIT.getKey(), Integer.toString(anchorLimit));
-        }
-        if (requestTimeout != DEFAULT_REQUEST_TIMEOUT) {
-            properties.setProperty(REQUEST_TIMEOUT.getKey(), Integer.toString(requestTimeout));
-        }
+        properties.setProperty(STACK_DEPTH.getKey(), stackDepth != DEFAULT_STACK_DEPTH ? Integer.toString(stackDepth) : "");
+        properties.setProperty(ANCHOR_LIMIT.getKey(), anchorLimit != DEFAULT_ANCHOR_LIMIT ? Integer.toString(anchorLimit) : "");
+        properties.setProperty(REQUEST_TIMEOUT.getKey(), requestTimeout != DEFAULT_REQUEST_TIMEOUT ? Integer.toString(requestTimeout) : "");
     }
     
     @Override
