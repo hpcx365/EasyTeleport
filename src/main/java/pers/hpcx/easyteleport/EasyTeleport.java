@@ -14,11 +14,8 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.command.argument.GameProfileArgumentType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtIo;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundCategory;
@@ -36,9 +33,7 @@ import static net.minecraft.server.command.CommandManager.*;
 import static pers.hpcx.easyteleport.EasyTeleportConfig.*;
 import static pers.hpcx.easyteleport.EasyTeleportUtils.*;
 
-public class EasyTeleport
-        implements ModInitializer, ServerLifecycleEvents.ServerStarting, ServerTickEvents.EndTick, ServerLivingEntityEvents.AfterDeath,
-                   CommandRegistrationCallback {
+public class EasyTeleport implements ModInitializer, CommandRegistrationCallback {
     
     public static final int DEFAULT_STACK_DEPTH = 8;
     public static final int DEFAULT_ANCHOR_LIMIT = 16;
@@ -57,14 +52,28 @@ public class EasyTeleport
     
     @Override
     public void onInitialize() {
-        ServerLifecycleEvents.SERVER_STARTING.register(this);
-        ServerTickEvents.END_SERVER_TICK.register(this);
-        ServerLivingEntityEvents.AFTER_DEATH.register(this);
+        ServerLifecycleEvents.SERVER_STARTING.register(loadConfig);
+        ServerLifecycleEvents.SERVER_STARTING.register(loadPublicAnchors);
+        ServerLivingEntityEvents.AFTER_DEATH.register(afterDeath);
+        ServerTickEvents.END_SERVER_TICK.register(updateTpRequests);
+        ServerTickEvents.END_SERVER_TICK.register(updateTpHereRequests);
+        ServerTickEvents.END_SERVER_TICK.register(updateShareRequests);
         CommandRegistrationCallback.EVENT.register(this);
     }
     
-    @Override
-    public void onServerStarting(MinecraftServer server) {
+    public void getProperties(Properties properties) {
+        stackDepth = getInteger(properties, STACK_DEPTH.getKey(), DEFAULT_STACK_DEPTH, LOGGER);
+        anchorLimit = getInteger(properties, ANCHOR_LIMIT.getKey(), DEFAULT_ANCHOR_LIMIT, LOGGER);
+        requestTimeout = getInteger(properties, REQUEST_TIMEOUT.getKey(), DEFAULT_REQUEST_TIMEOUT, LOGGER);
+    }
+    
+    public void setProperties(Properties properties) {
+        properties.setProperty(STACK_DEPTH.getKey(), stackDepth != DEFAULT_STACK_DEPTH ? Integer.toString(stackDepth) : "");
+        properties.setProperty(ANCHOR_LIMIT.getKey(), anchorLimit != DEFAULT_ANCHOR_LIMIT ? Integer.toString(anchorLimit) : "");
+        properties.setProperty(REQUEST_TIMEOUT.getKey(), requestTimeout != DEFAULT_REQUEST_TIMEOUT ? Integer.toString(requestTimeout) : "");
+    }
+    
+    public final ServerLifecycleEvents.ServerStarting loadConfig = server -> {
         try {
             if (Files.exists(CONFIG_PATH)) {
                 try (InputStream in = Files.newInputStream(CONFIG_PATH)) {
@@ -80,8 +89,12 @@ public class EasyTeleport
                     properties.store(out, CONFIG_COMMENTS);
                 }
             }
-        } catch (IOException ignored) {
+        } catch (IOException e) {
+            LOGGER.error("failed to load config file", e);
         }
+    };
+    
+    public final ServerLifecycleEvents.ServerStarting loadPublicAnchors = server -> {
         try {
             NbtCompound anchorData = NbtIo.read(ANCHOR_PATH.toFile());
             if (anchorData != null) {
@@ -89,67 +102,68 @@ public class EasyTeleport
                     publicAnchors.put(anchorName, TeleportAnchor.fromCompound(anchorData.getCompound(anchorName)));
                 }
             }
-        } catch (IOException ignored) {
+        } catch (IOException e) {
+            LOGGER.error("failed to load public anchors", e);
         }
-    }
+    };
     
-    public void getProperties(Properties properties) {
-        stackDepth = getInteger(properties, STACK_DEPTH.getKey(), DEFAULT_STACK_DEPTH, LOGGER);
-        anchorLimit = getInteger(properties, ANCHOR_LIMIT.getKey(), DEFAULT_ANCHOR_LIMIT, LOGGER);
-        requestTimeout = getInteger(properties, REQUEST_TIMEOUT.getKey(), DEFAULT_REQUEST_TIMEOUT, LOGGER);
-    }
-    
-    public void setProperties(Properties properties) {
-        properties.setProperty(STACK_DEPTH.getKey(), stackDepth != DEFAULT_STACK_DEPTH ? Integer.toString(stackDepth) : "");
-        properties.setProperty(ANCHOR_LIMIT.getKey(), anchorLimit != DEFAULT_ANCHOR_LIMIT ? Integer.toString(anchorLimit) : "");
-        properties.setProperty(REQUEST_TIMEOUT.getKey(), requestTimeout != DEFAULT_REQUEST_TIMEOUT ? Integer.toString(requestTimeout) : "");
-    }
-    
-    @Override
-    public void onEndTick(MinecraftServer server) {
-        if (!tpRequests.isEmpty()) {
-            for (Iterator<Map.Entry<UUID, List<TeleportRequest>>> entryIterator = tpRequests.entrySet().iterator();
-                 entryIterator.hasNext(); ) {
-                List<TeleportRequest> requestList = entryIterator.next().getValue();
-                for (Iterator<TeleportRequest> requestIterator = requestList.iterator(); requestIterator.hasNext(); ) {
-                    TeleportRequest request = requestIterator.next();
-                    if (--request.keepAliveTicks <= 0) {
-                        requestIterator.remove();
-                        notifyRequestTimedOut("Teleport", server, request.sourcePlayerID, request.targetPlayerID);
-                    }
-                }
-                if (requestList.isEmpty()) {
-                    entryIterator.remove();
-                }
-            }
+    public final ServerLivingEntityEvents.AfterDeath afterDeath = (entity, damageSource) -> {
+        if (entity instanceof ServerPlayerEntity player) {
+            TeleportStack stack = ((TeleportStorage) player).easyTeleport$getStack();
+            stack.afterDeath(player, stackDepth);
         }
-        if (!tpHereRequests.isEmpty()) {
-            for (Iterator<Map.Entry<UUID, TeleportRequest>> entryIterator = tpHereRequests.entrySet().iterator();
-                 entryIterator.hasNext(); ) {
-                TeleportRequest request = entryIterator.next().getValue();
+    };
+    
+    public final ServerTickEvents.EndTick updateTpRequests = server -> {
+        if (tpRequests.isEmpty()) {
+            return;
+        }
+        for (Iterator<Map.Entry<UUID, List<TeleportRequest>>> entryIterator = tpRequests.entrySet().iterator(); entryIterator.hasNext(); ) {
+            List<TeleportRequest> requestList = entryIterator.next().getValue();
+            for (Iterator<TeleportRequest> requestIterator = requestList.iterator(); requestIterator.hasNext(); ) {
+                TeleportRequest request = requestIterator.next();
                 if (--request.keepAliveTicks <= 0) {
-                    entryIterator.remove();
-                    notifyRequestTimedOut("Teleport here", server, request.sourcePlayerID, request.targetPlayerID);
+                    requestIterator.remove();
+                    notifyRequestTimedOut("Teleport", server, request.sourcePlayerID, request.targetPlayerID);
                 }
             }
-        }
-        if (!shareRequests.isEmpty()) {
-            for (Iterator<Map.Entry<UUID, List<ShareRequest>>> entryIterator = shareRequests.entrySet().iterator();
-                 entryIterator.hasNext(); ) {
-                List<ShareRequest> requestList = entryIterator.next().getValue();
-                for (Iterator<ShareRequest> requestIterator = requestList.iterator(); requestIterator.hasNext(); ) {
-                    ShareRequest request = requestIterator.next();
-                    if (--request.keepAliveTicks <= 0) {
-                        requestIterator.remove();
-                        notifyRequestTimedOut("Anchor share", server, request.sourcePlayerID, request.targetPlayerID);
-                    }
-                }
-                if (requestList.isEmpty()) {
-                    entryIterator.remove();
-                }
+            if (requestList.isEmpty()) {
+                entryIterator.remove();
             }
         }
-    }
+    };
+    
+    public final ServerTickEvents.EndTick updateTpHereRequests = server -> {
+        if (tpHereRequests.isEmpty()) {
+            return;
+        }
+        for (Iterator<Map.Entry<UUID, TeleportRequest>> entryIterator = tpHereRequests.entrySet().iterator(); entryIterator.hasNext(); ) {
+            TeleportRequest request = entryIterator.next().getValue();
+            if (--request.keepAliveTicks <= 0) {
+                entryIterator.remove();
+                notifyRequestTimedOut("Teleport here", server, request.sourcePlayerID, request.targetPlayerID);
+            }
+        }
+    };
+    
+    public final ServerTickEvents.EndTick updateShareRequests = server -> {
+        if (shareRequests.isEmpty()) {
+            return;
+        }
+        for (Iterator<Map.Entry<UUID, List<ShareRequest>>> entryIterator = shareRequests.entrySet().iterator(); entryIterator.hasNext(); ) {
+            List<ShareRequest> requestList = entryIterator.next().getValue();
+            for (Iterator<ShareRequest> requestIterator = requestList.iterator(); requestIterator.hasNext(); ) {
+                ShareRequest request = requestIterator.next();
+                if (--request.keepAliveTicks <= 0) {
+                    requestIterator.remove();
+                    notifyRequestTimedOut("Anchor share", server, request.sourcePlayerID, request.targetPlayerID);
+                }
+            }
+            if (requestList.isEmpty()) {
+                entryIterator.remove();
+            }
+        }
+    };
     
     @Override
     public void register(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess,
@@ -232,14 +246,6 @@ public class EasyTeleport
         dispatcher.register(literal("config").requires(isOperator).then(literal("default").executes(this::restoreDefault)));
     }
     
-    @Override
-    public void afterDeath(LivingEntity entity, DamageSource damageSource) {
-        if (entity instanceof ServerPlayerEntity player) {
-            TeleportStack stack = ((TeleportStorage) player).easyTeleport$getStack();
-            stack.afterDeath(player, stackDepth);
-        }
-    }
-    
     public int teleport(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
         ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
         TeleportStack stack = ((TeleportStorage) player).easyTeleport$getStack();
@@ -274,13 +280,13 @@ public class EasyTeleport
         } else {
             for (TeleportRequest request : requestList) {
                 if (request.sourcePlayerID.equals(sourceID)) {
-                    send(sourcePlayer, false, gray("You have requested to teleport to "), player(targetPlayer), gray("."));
+                    send(sourcePlayer, false, gray("You have requested to teleport to "), player(targetPlayer));
                     return 0;
                 }
             }
         }
         requestList.add(new TeleportRequest(requestTimeout / 50, sourceID, targetID));
-        send(sourcePlayer, true, green("Requested to teleport to "), player(targetPlayer), green("."));
+        send(sourcePlayer, true, green("Requested to teleport to "), player(targetPlayer));
         send(targetPlayer, true, player(sourcePlayer), green(" has requested to teleport to you. Type "), yellow("/tpaccept"),
              green(" to accept."));
         targetPlayer.playSound(SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(), SoundCategory.PLAYERS, 1.0f, 1.0f);
@@ -388,7 +394,7 @@ public class EasyTeleport
         }
         TeleportAnchor anchor = new TeleportAnchor(player);
         anchors.put("home", anchor);
-        send(player, true, green("Set anchor "), anchor("home", anchor), green("."));
+        send(player, true, green("Set anchor "), anchor("home", anchor));
         return 1;
     }
     
@@ -431,7 +437,7 @@ public class EasyTeleport
         String anchorName = StringArgumentType.getString(context, "anchor-name");
         TeleportAnchor anchor = new TeleportAnchor(player);
         anchors.put(anchorName, anchor);
-        send(player, true, green("Set anchor "), anchor(anchorName, anchor), green("."));
+        send(player, true, green("Set anchor "), anchor(anchorName, anchor));
         return 1;
     }
     
@@ -445,7 +451,7 @@ public class EasyTeleport
             return 0;
         } else {
             anchors.keySet().remove(anchorName);
-            send(player, true, green("Remove anchor "), anchor(anchorName, anchor), green("."));
+            send(player, true, green("Remove anchor "), anchor(anchorName, anchor));
             return 1;
         }
     }
@@ -473,14 +479,13 @@ public class EasyTeleport
         } else {
             for (ShareRequest request : requestList) {
                 if (request.anchorName.equals(anchorName)) {
-                    send(sourcePlayer, false, player(targetPlayer), gray(" has already received an anchor named "), yellow(anchorName),
-                         gray("."));
+                    send(sourcePlayer, false, player(targetPlayer), gray(" has already received an anchor named "), yellow(anchorName));
                     return 0;
                 }
             }
         }
         requestList.add(new ShareRequest(requestTimeout / 50, sourceID, targetID, anchorName, anchor));
-        send(sourcePlayer, true, green("Requested to share anchor with "), player(targetPlayer), green("."));
+        send(sourcePlayer, true, green("Requested to share anchor with "), player(targetPlayer));
         send(targetPlayer, true, player(sourcePlayer), green(" has requested to share "), anchor(anchorName, anchor),
              green(" with you. Type "), yellow("/anchor accept"), green(" to accept."));
         targetPlayer.playSound(SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(), SoundCategory.PLAYERS, 1.0f, 1.0f);
@@ -514,13 +519,12 @@ public class EasyTeleport
                     }
                 }
                 if (hasRequest) {
-                    send(sourcePlayer, false, player(targetPlayer), gray(" has already received an anchor named "), yellow(anchorName),
-                         gray("."));
+                    send(sourcePlayer, false, player(targetPlayer), gray(" has already received an anchor named "), yellow(anchorName));
                     continue;
                 }
             }
             requestList.add(new ShareRequest(requestTimeout / 50, sourceID, targetID, anchorName, anchor));
-            send(sourcePlayer, true, green("Requested to share anchor with "), player(targetPlayer), green("."));
+            send(sourcePlayer, true, green("Requested to share anchor with "), player(targetPlayer));
             send(targetPlayer, true, player(sourcePlayer), green(" has requested to share "), anchor(anchorName, anchor),
                  green(" with you. Type "), yellow("/anchor accept"), green(" to accept."));
             targetPlayer.playSound(SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(), SoundCategory.PLAYERS, 1.0f, 1.0f);
@@ -546,7 +550,7 @@ public class EasyTeleport
                 send(targetPlayer, false, red("Anchor count limit exceeded."));
             } else {
                 anchors.put(request.anchorName, request.anchor);
-                send(targetPlayer, true, green("Accepted anchor "), anchor(request.anchorName, request.anchor), green("."));
+                send(targetPlayer, true, green("Accepted anchor "), anchor(request.anchorName, request.anchor));
             }
             iterator.remove();
             if (requestList.isEmpty()) {
@@ -572,7 +576,7 @@ public class EasyTeleport
                 break;
             } else {
                 anchors.put(request.anchorName, request.anchor);
-                send(targetPlayer, true, green("Accepted anchor "), anchor(request.anchorName, request.anchor), green("."));
+                send(targetPlayer, true, green("Accepted anchor "), anchor(request.anchorName, request.anchor));
             }
         }
         requestList.clear();
@@ -612,7 +616,7 @@ public class EasyTeleport
         String anchorName = StringArgumentType.getString(context, "anchor-name");
         TeleportAnchor anchor = new TeleportAnchor(player);
         publicAnchors.put(anchorName, anchor);
-        send(player, true, green("Set public anchor "), anchor(anchorName, anchor, false, true), green("."));
+        send(player, true, green("Set public anchor "), anchor(anchorName, anchor, false, true));
         return storePublicAnchors(player, publicAnchors);
     }
     
@@ -625,7 +629,7 @@ public class EasyTeleport
             return 0;
         } else {
             publicAnchors.keySet().remove(anchorName);
-            send(player, true, green("Remove public anchor "), anchor(anchorName, anchor, false, true), green("."));
+            send(player, true, green("Remove public anchor "), anchor(anchorName, anchor, false, true));
             return storePublicAnchors(player, publicAnchors);
         }
     }
