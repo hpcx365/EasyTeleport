@@ -91,15 +91,17 @@ public class EasyTeleport
     
     public void getProperties(Properties properties) {
         String stackDepth = properties.getProperty(STACK_DEPTH.getKey());
-        String anchorLimit = properties.getProperty(ANCHOR_LIMIT.getKey());
-        String requestTimeout = properties.getProperty(REQUEST_TIMEOUT.getKey());
-        if (stackDepth != null) {
+        if (stackDepth != null && !stackDepth.isEmpty()) {
             this.stackDepth = Integer.parseInt(stackDepth);
         }
-        if (anchorLimit != null) {
+        
+        String anchorLimit = properties.getProperty(ANCHOR_LIMIT.getKey());
+        if (anchorLimit != null && !anchorLimit.isEmpty()) {
             this.anchorLimit = Integer.parseInt(anchorLimit);
         }
-        if (requestTimeout != null) {
+        
+        String requestTimeout = properties.getProperty(REQUEST_TIMEOUT.getKey());
+        if (requestTimeout != null && !requestTimeout.isEmpty()) {
             this.requestTimeout = Integer.parseInt(requestTimeout);
         }
     }
@@ -217,7 +219,8 @@ public class EasyTeleport
         dispatcher.register(literal("anchor").requires(isPlayer).then(literal("accept").executes(this::acceptAllAnchors)));
         
         dispatcher.register(literal("anchor").requires(isPlayer).then(literal("accept").then(
-                argument("anchor-name", StringArgumentType.string()).executes(this::acceptAnchor))));
+                argument("anchor-name", StringArgumentType.string()).suggests(SharedAnchorSuggestionProvider.suggestions(this))
+                                                                    .executes(this::acceptAnchor))));
         
         dispatcher.register(literal("public").requires(isOperator).then(literal("list").executes(this::listPublicAnchors)));
         
