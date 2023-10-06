@@ -6,6 +6,7 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.logging.LogUtils;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
@@ -22,6 +23,7 @@ import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
+import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -92,20 +94,9 @@ public class EasyTeleport
     }
     
     public void getProperties(Properties properties) {
-        String stackDepth = properties.getProperty(STACK_DEPTH.getKey());
-        if (stackDepth != null && !stackDepth.isEmpty()) {
-            this.stackDepth = Integer.parseInt(stackDepth);
-        }
-        
-        String anchorLimit = properties.getProperty(ANCHOR_LIMIT.getKey());
-        if (anchorLimit != null && !anchorLimit.isEmpty()) {
-            this.anchorLimit = Integer.parseInt(anchorLimit);
-        }
-        
-        String requestTimeout = properties.getProperty(REQUEST_TIMEOUT.getKey());
-        if (requestTimeout != null && !requestTimeout.isEmpty()) {
-            this.requestTimeout = Integer.parseInt(requestTimeout);
-        }
+        stackDepth = getInteger(properties, STACK_DEPTH.getKey(), DEFAULT_STACK_DEPTH, LOGGER);
+        anchorLimit = getInteger(properties, ANCHOR_LIMIT.getKey(), DEFAULT_ANCHOR_LIMIT, LOGGER);
+        requestTimeout = getInteger(properties, REQUEST_TIMEOUT.getKey(), DEFAULT_REQUEST_TIMEOUT, LOGGER);
     }
     
     public void setProperties(Properties properties) {

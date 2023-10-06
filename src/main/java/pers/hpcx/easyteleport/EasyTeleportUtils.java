@@ -13,6 +13,7 @@ import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.text.TextContent;
 import net.minecraft.util.math.Vec3d;
+import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -159,6 +160,18 @@ public final class EasyTeleportUtils {
             return 0;
         }
         return 1;
+    }
+    
+    public static int getInteger(Properties properties, String key, int defaultValue, Logger logger) {
+        String str = properties.getProperty(key);
+        if (str != null && !str.isEmpty()) {
+            try {
+                return Integer.parseInt(str);
+            } catch (NumberFormatException e) {
+                logger.error(key + ": incorrect number format", e);
+            }
+        }
+        return defaultValue;
     }
     
     public static int storeProperty(ServerPlayerEntity player, String key, String value) {
