@@ -550,7 +550,12 @@ public class EasyTeleport implements ModInitializer, CommandRegistrationCallback
                 send(targetPlayer, false, red("Anchor count limit exceeded."));
             } else {
                 anchors.put(request.anchorName, request.anchor);
+                ServerPlayerEntity sourcePlayer = targetPlayer.getServer().getPlayerManager().getPlayer(request.sourcePlayerID);
                 send(targetPlayer, true, green("Accepted anchor "), anchor(request.anchorName, request.anchor));
+                if (sourcePlayer != null) {
+                    send(sourcePlayer, true, green("Anchor "), anchor(request.anchorName, request.anchor), green(" shared with "),
+                         player(targetPlayer), green(" successfully"));
+                }
             }
             iterator.remove();
             if (requestList.isEmpty()) {
@@ -576,7 +581,12 @@ public class EasyTeleport implements ModInitializer, CommandRegistrationCallback
                 break;
             } else {
                 anchors.put(request.anchorName, request.anchor);
+                ServerPlayerEntity sourcePlayer = targetPlayer.getServer().getPlayerManager().getPlayer(request.sourcePlayerID);
                 send(targetPlayer, true, green("Accepted anchor "), anchor(request.anchorName, request.anchor));
+                if (sourcePlayer != null) {
+                    send(sourcePlayer, true, green("Anchor "), anchor(request.anchorName, request.anchor), green(" shared with "),
+                         player(targetPlayer), green(" successfully"));
+                }
             }
         }
         requestList.clear();
