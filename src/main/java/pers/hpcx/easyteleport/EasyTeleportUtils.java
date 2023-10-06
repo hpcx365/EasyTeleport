@@ -175,7 +175,7 @@ public final class EasyTeleportUtils {
     }
     
     public static int storeProperty(ServerPlayerEntity player, String key, String value) {
-        send(player, true, purple(key), green(" set to "), yellow(value), green("."));
+        send(player, true, purple(key), green(" set to "), yellow(value));
         Properties properties = new Properties();
         
         try (InputStream in = Files.newInputStream(CONFIG_PATH)) {
@@ -199,7 +199,7 @@ public final class EasyTeleportUtils {
     
     public static int restoreProperties(ServerPlayerEntity player, String[] keys, String[] values) {
         for (int i = 0; i < keys.length; i++) {
-            send(player, true, purple(keys[i]), green(" set to "), yellow(values[i]), green("."));
+            send(player, true, purple(keys[i]), green(" set to "), yellow(values[i]));
         }
         try {
             Files.deleteIfExists(CONFIG_PATH);

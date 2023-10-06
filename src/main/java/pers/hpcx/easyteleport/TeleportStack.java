@@ -13,6 +13,14 @@ public class TeleportStack {
     public final LinkedList<TeleportAnchor> tppAnchors = new LinkedList<>();
     public final LinkedList<TeleportAnchor> tpbAnchors = new LinkedList<>();
     
+    public void afterDeath(ServerPlayerEntity player, int depth) {
+        while (tpbAnchors.size() >= depth) {
+            tpbAnchors.removeLast();
+        }
+        tpbAnchors.addFirst(new TeleportAnchor(player));
+        tppAnchors.clear();
+    }
+    
     public int tpp(ServerPlayerEntity player, int depth) {
         if (tppAnchors.isEmpty()) {
             send(player, false, gray("Cannot tpp anymore."));
@@ -31,14 +39,6 @@ public class TeleportStack {
             tpb(player, null, tpbAnchors.removeFirst(), true, false, depth);
             return 1;
         }
-    }
-    
-    public void afterDeath(ServerPlayerEntity player, int depth) {
-        while (tpbAnchors.size() >= depth) {
-            tpbAnchors.removeLast();
-        }
-        tpbAnchors.addFirst(new TeleportAnchor(player));
-        tppAnchors.clear();
     }
     
     public int tpp(ServerPlayerEntity player, EasyTeleport mod, String anchorName, int depth) {
