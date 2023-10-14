@@ -5,12 +5,12 @@ import java.util.UUID;
 public class TeleportRequest {
     
     public int keepAliveTicks;
-    public final UUID sourcePlayerID;
-    public final UUID targetPlayerID;
+    public final UUID originID;
+    public final UUID targetID;
     
-    public TeleportRequest(int keepAliveTicks, UUID sourcePlayerID, UUID targetPlayerID) {
+    public TeleportRequest(int keepAliveTicks, UUID originID, UUID targetID) {
         this.keepAliveTicks = keepAliveTicks;
-        this.sourcePlayerID = sourcePlayerID;
-        this.targetPlayerID = targetPlayerID;
+        this.originID = originID;
+        this.targetID = targetID;
     }
 }

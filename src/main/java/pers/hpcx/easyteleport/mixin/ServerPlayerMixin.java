@@ -34,6 +34,13 @@ public class ServerPlayerMixin implements TeleportStorage {
         return anchors;
     }
     
+    @Inject(at = @At("RETURN"), method = "copyFrom(Lnet/minecraft/server/network/ServerPlayerEntity;Z)V")
+    public void copyFrom(ServerPlayerEntity oldPlayer, boolean alive, CallbackInfo c) {
+        ServerPlayerMixin mixin = (ServerPlayerMixin) (Object) oldPlayer;
+        stack = mixin.stack;
+        anchors = mixin.anchors;
+    }
+    
     @Inject(at = @At("RETURN"), method = "readCustomDataFromNbt(Lnet/minecraft/nbt/NbtCompound;)V")
     public void readCustomDataFromNbt(NbtCompound nbt, CallbackInfo c) {
         NbtCompound modData = null;
@@ -52,7 +59,12 @@ public class ServerPlayerMixin implements TeleportStorage {
         if (modData.contains("anchors")) {
             NbtCompound anchorData = modData.getCompound("anchors");
             for (String anchorName : anchorData.getKeys()) {
-                anchors.put(anchorName, TeleportAnchor.fromCompound(anchorData.getCompound(anchorName)));
+                TeleportAnchor anchor = TeleportAnchor.fromCompound(anchorData.getCompound(anchorName));
+                if (anchor.name().isEmpty()) {
+                    anchors.put(anchorName, new TeleportAnchor(anchorName, anchor.position(), anchor.world()));
+                } else {
+                    anchors.put(anchorName, anchor);
+                }
             }
         }
     }
@@ -68,12 +80,5 @@ public class ServerPlayerMixin implements TeleportStorage {
         modData.put("stack", stackData);
         modData.put("anchors", anchorData);
         nbt.put(MOD_ID, modData);
-    }
-    
-    @Inject(at = @At("RETURN"), method = "copyFrom(Lnet/minecraft/server/network/ServerPlayerEntity;Z)V")
-    public void copyFrom(ServerPlayerEntity oldPlayer, boolean alive, CallbackInfo c) {
-        ServerPlayerMixin mixin = (ServerPlayerMixin) (Object) oldPlayer;
-        stack = mixin.stack;
-        anchors = mixin.anchors;
     }
 }

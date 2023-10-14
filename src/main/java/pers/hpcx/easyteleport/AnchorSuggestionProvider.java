@@ -19,8 +19,7 @@ public record AnchorSuggestionProvider(EasyTeleport mod) implements SuggestionPr
     }
     
     @Override
-    public CompletableFuture<Suggestions> getSuggestions(CommandContext<ServerCommandSource> context, SuggestionsBuilder builder)
-            throws CommandSyntaxException {
+    public CompletableFuture<Suggestions> getSuggestions(CommandContext<ServerCommandSource> context, SuggestionsBuilder builder) throws CommandSyntaxException {
         ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
         Map<String, TeleportAnchor> anchors = ((TeleportStorage) player).easyTeleport$getAnchors();
         ArrayList<String> anchorNames = new ArrayList<>(anchors.keySet());

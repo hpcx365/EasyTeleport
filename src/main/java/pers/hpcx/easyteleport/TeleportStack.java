@@ -1,6 +1,7 @@
 package pers.hpcx.easyteleport;
 
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 
 import java.util.Iterator;
@@ -10,6 +11,8 @@ import static pers.hpcx.easyteleport.EasyTeleportUtils.*;
 
 public class TeleportStack {
     
+    public static final String TEMP = "temp";
+    
     public final LinkedList<TeleportAnchor> tppAnchors = new LinkedList<>();
     public final LinkedList<TeleportAnchor> tpbAnchors = new LinkedList<>();
     
@@ -17,77 +20,77 @@ public class TeleportStack {
         while (tpbAnchors.size() >= depth) {
             tpbAnchors.removeLast();
         }
-        tpbAnchors.addFirst(new TeleportAnchor(player));
+        tpbAnchors.addFirst(new TeleportAnchor(TEMP, player));
         tppAnchors.clear();
     }
     
-    public int tpp(ServerPlayerEntity player, int depth) {
+    public int tpp(ServerCommandSource source, ServerPlayerEntity player, int depth) {
         if (tppAnchors.isEmpty()) {
-            send(player, false, gray("Cannot tpp anymore."));
+            send(source, false, gray("Cannot tpp anymore."));
             return 0;
         } else {
-            tpp(player, null, tppAnchors.removeFirst(), true, false, depth);
+            tpp(source, player, null, tppAnchors.removeFirst(), true, false, depth);
             return 1;
         }
     }
     
-    public int tpb(ServerPlayerEntity player, int depth) {
+    public int tpb(ServerCommandSource source, ServerPlayerEntity player, int depth) {
         if (tpbAnchors.isEmpty()) {
-            send(player, false, gray("Cannot tpb anymore."));
+            send(source, false, gray("Cannot tpb anymore."));
             return 0;
         } else {
-            tpb(player, null, tpbAnchors.removeFirst(), true, false, depth);
+            tpb(source, player, null, tpbAnchors.removeFirst(), true, false, depth);
             return 1;
         }
     }
     
-    public int tpp(ServerPlayerEntity player, EasyTeleport mod, String anchorName, int depth) {
+    public int tpp(ServerCommandSource source, ServerPlayerEntity player, EasyTeleport mod, String anchorName, int depth) {
         TeleportAnchor anchor = ((TeleportStorage) player).easyTeleport$getAnchors().get(anchorName);
         if (anchor != null) {
-            tpp(player, anchorName, anchor, false, false, depth);
+            tpp(source, player, anchorName, anchor, false, false, depth);
             return 1;
         }
         anchor = mod.publicAnchors.get(anchorName);
         if (anchor != null) {
-            tpp(player, anchorName, anchor, false, true, depth);
+            tpp(source, player, anchorName, anchor, false, true, depth);
             return 1;
         }
-        send(player, false, gray("Anchor "), red(anchorName), gray(" not found."));
+        send(source, false, gray("Anchor "), red(anchorName), gray(" not found."));
         return 0;
     }
     
-    public void tpp(ServerPlayerEntity player, ServerPlayerEntity target, int depth) {
+    public void tpp(ServerCommandSource source, ServerPlayerEntity player, ServerPlayerEntity target, int depth) {
         while (tpbAnchors.size() >= depth) {
             tpbAnchors.removeLast();
         }
-        tpbAnchors.addFirst(new TeleportAnchor(player));
+        tpbAnchors.addFirst(new TeleportAnchor(TEMP, player));
         teleport(player, target);
-        send(player, true, green("Teleport to "), player(target), green("."));
-        send(target, true, player(player), green(" is teleported to you."));
+        send(source, true, green("Teleport to "), player(target), green("."));
+        send(source, true, player(player), green(" is teleported to you."));
     }
     
-    public void tpp(ServerPlayerEntity player, String anchorName, TeleportAnchor anchor, boolean isTemp, boolean isPublic, int depth) {
+    public void tpp(ServerCommandSource source, ServerPlayerEntity player, String anchorName, TeleportAnchor anchor, boolean isTemp, boolean isPublic, int depth) {
         while (tpbAnchors.size() >= depth) {
             tpbAnchors.removeLast();
         }
-        tpbAnchors.addFirst(new TeleportAnchor(player));
+        tpbAnchors.addFirst(new TeleportAnchor(TEMP, player));
         if (!isTemp) {
             tppAnchors.clear();
         }
-        teleport(player, anchor);
-        send(player, true, green("Teleport to "), anchor(anchorName, anchor, isTemp, isPublic), green("."));
+        teleport(source, player, anchor);
+        send(source, true, green("Teleport to "), anchor(anchorName, anchor, isTemp, isPublic), green("."));
     }
     
-    public void tpb(ServerPlayerEntity player, String anchorName, TeleportAnchor anchor, boolean isTemp, boolean isPublic, int depth) {
+    public void tpb(ServerCommandSource source, ServerPlayerEntity player, String anchorName, TeleportAnchor anchor, boolean isTemp, boolean isPublic, int depth) {
         while (tppAnchors.size() >= depth) {
             tppAnchors.removeLast();
         }
-        tppAnchors.addFirst(new TeleportAnchor(player));
+        tppAnchors.addFirst(new TeleportAnchor(TEMP, player));
         if (!isTemp) {
             tpbAnchors.clear();
         }
-        teleport(player, anchor);
-        send(player, true, green("Teleport to "), anchor(anchorName, anchor, isTemp, isPublic), green("."));
+        teleport(source, player, anchor);
+        send(source, true, green("Teleport to "), anchor(anchorName, anchor, isTemp, isPublic), green("."));
     }
     
     public NbtCompound toCompound() {

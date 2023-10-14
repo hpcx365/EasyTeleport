@@ -12,20 +12,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-public record SharedAnchorSuggestionProvider(EasyTeleport mod) implements SuggestionProvider<ServerCommandSource> {
+public record SharingAnchorSuggestionProvider(EasyTeleport mod) implements SuggestionProvider<ServerCommandSource> {
     
-    public static SharedAnchorSuggestionProvider suggestions(EasyTeleport mod) {
-        return new SharedAnchorSuggestionProvider(mod);
+    public static SharingAnchorSuggestionProvider suggestions(EasyTeleport mod) {
+        return new SharingAnchorSuggestionProvider(mod);
     }
     
     @Override
-    public CompletableFuture<Suggestions> getSuggestions(CommandContext<ServerCommandSource> context, SuggestionsBuilder builder)
-            throws CommandSyntaxException {
+    public CompletableFuture<Suggestions> getSuggestions(CommandContext<ServerCommandSource> context, SuggestionsBuilder builder) throws CommandSyntaxException {
         ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
         List<ShareRequest> requestList = mod.shareRequests.get(player.getGameProfile().getId());
         ArrayList<String> anchorNames = new ArrayList<>();
         for (ShareRequest request : requestList) {
-            anchorNames.add(request.anchorName);
+            anchorNames.add(request.anchor.name());
         }
         anchorNames.sort(String::compareToIgnoreCase);
         for (String anchorName : anchorNames) {

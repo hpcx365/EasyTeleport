@@ -1,7 +1,7 @@
 # EasyTeleport
 
-A mod adding command `/tpb`, `/tpp`, `/tpa`, `/tphere`, `/tpaccept`, `/home`, `/sethome`, `/anchor`, `/public`
-and `/config`.
+A mod that implements multiple teleport functions, adding `/tpb`, `/tpp`, `/tpa`, `/tphere`, `/tpaccept`, `/home`,
+`/sethome`, `/anchor`, `/public` and `/tpconfig`.
 
 Made for servers! Clients don't have to install EasyTeleport to connect to the server.
 
@@ -15,11 +15,11 @@ Made for servers! Clients don't have to install EasyTeleport to connect to the s
 
 `/tpa <target-player>` Request to teleport you to a player.
 
-`/tphere <source-player>` Request to teleport a player to you.
+`/tphere <origin-player>` Request to teleport a player to you.
 
 `/tpaccept` Accept all requests that have not timed out.
 
-`/tpaccept <source-player>` Accept the request from a player.
+`/tpaccept <origin-player>` Accept the request from a player.
 
 `/home` Teleport you to home.
 
@@ -49,12 +49,12 @@ Made for servers! Clients don't have to install EasyTeleport to connect to the s
 
 `/public remove <anchor-name>` Remove a public anchor.
 
-`/config depth <stack-depth>` Set the teleport stack depth.
+`/tpconfig depth <stack-depth>` Set the teleport stack depth.
 
-`/config limit <anchor-limit>` Set the maximum number of anchors that players can have.
+`/tpconfig limit <anchor-limit>` Set the maximum number of anchors that players can have.
 
-`/config timeout <request-timeout>` Set the timeout of requests in milliseconds.
+`/tpconfig timeout <request-timeout>` Set the timeout of requests in milliseconds.
 
-`/config default` Restore all default values.
+`/tpconfig default` Restore all default values.
 
 `stack-depth`, `anchor-limit` and `request-timeout` can be set in **_easy-teleport.properties_** as well.
