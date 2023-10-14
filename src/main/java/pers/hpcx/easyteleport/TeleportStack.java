@@ -26,7 +26,7 @@ public class TeleportStack {
     
     public int tpp(ServerCommandSource source, ServerPlayerEntity player, int depth) {
         if (tppAnchors.isEmpty()) {
-            send(source, false, gray("Cannot tpp anymore."));
+            send(source, false, gray("Cannot tpp anymore"));
             return 0;
         } else {
             tpp(source, player, null, tppAnchors.removeFirst(), true, false, depth);
@@ -36,7 +36,7 @@ public class TeleportStack {
     
     public int tpb(ServerCommandSource source, ServerPlayerEntity player, int depth) {
         if (tpbAnchors.isEmpty()) {
-            send(source, false, gray("Cannot tpb anymore."));
+            send(source, false, gray("Cannot tpb anymore"));
             return 0;
         } else {
             tpb(source, player, null, tpbAnchors.removeFirst(), true, false, depth);
@@ -55,7 +55,7 @@ public class TeleportStack {
             tpp(source, player, anchorName, anchor, false, true, depth);
             return 1;
         }
-        send(source, false, gray("Anchor "), red(anchorName), gray(" not found."));
+        send(source, false, gray("Anchor "), red(anchorName), gray(" not found"));
         return 0;
     }
     
@@ -65,8 +65,8 @@ public class TeleportStack {
         }
         tpbAnchors.addFirst(new TeleportAnchor(TEMP, player));
         teleport(player, target);
-        send(source, true, green("Teleport to "), player(target), green("."));
-        send(source, true, player(player), green(" is teleported to you."));
+        send(source, true, green("Teleport to "), player(target));
+        send(source, true, player(player), green(" is teleported to you"));
     }
     
     public void tpp(ServerCommandSource source, ServerPlayerEntity player, String anchorName, TeleportAnchor anchor, boolean isTemp, boolean isPublic, int depth) {
@@ -78,7 +78,7 @@ public class TeleportStack {
             tppAnchors.clear();
         }
         teleport(source, player, anchor);
-        send(source, true, green("Teleport to "), anchor(anchorName, anchor, isTemp, isPublic), green("."));
+        send(source, true, green("Teleport to "), anchor(anchorName, anchor, isTemp, isPublic));
     }
     
     public void tpb(ServerCommandSource source, ServerPlayerEntity player, String anchorName, TeleportAnchor anchor, boolean isTemp, boolean isPublic, int depth) {
@@ -90,7 +90,7 @@ public class TeleportStack {
             tpbAnchors.clear();
         }
         teleport(source, player, anchor);
-        send(source, true, green("Teleport to "), anchor(anchorName, anchor, isTemp, isPublic), green("."));
+        send(source, true, green("Teleport to "), anchor(anchorName, anchor, isTemp, isPublic));
     }
     
     public NbtCompound toCompound() {

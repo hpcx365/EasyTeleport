@@ -101,7 +101,7 @@ public final class EasyTeleportUtils {
     }
     
     public static void playerNotFound(ServerCommandSource source) {
-        send(source, false, gray("Player not found."));
+        send(source, false, gray("Player not found"));
     }
     
     public static UUID selectPlayerID(ServerCommandSource source, ServerPlayerEntity player, Collection<GameProfile> profiles) {
@@ -112,11 +112,11 @@ public final class EasyTeleportUtils {
         }
         UUID id = iterator.next().getId();
         if (iterator.hasNext()) {
-            send(source, false, red("Please specify only one player."));
+            send(source, false, red("Please specify only one player"));
             return null;
         }
         if (id.equals(player.getGameProfile().getId())) {
-            send(source, false, red("Cannot teleport to yourself."));
+            send(source, false, red("Cannot teleport to yourself"));
             return null;
         }
         if (source.getServer().getPlayerManager().getPlayer(id) == null) {
@@ -130,8 +130,8 @@ public final class EasyTeleportUtils {
         ServerPlayerEntity source = server.getPlayerManager().getPlayer(sourceID);
         ServerPlayerEntity target = server.getPlayerManager().getPlayer(targetID);
         if (source != null && target != null) {
-            send(source.getCommandSource(), true, gray(request + " request to "), player(target), gray(" has timed out."));
-            send(target.getCommandSource(), true, gray(request + " request from "), player(source), gray(" has timed out."));
+            send(source.getCommandSource(), true, gray(request + " request to "), player(target), gray(" has timed out"));
+            send(target.getCommandSource(), true, gray(request + " request from "), player(source), gray(" has timed out"));
         }
     }
     

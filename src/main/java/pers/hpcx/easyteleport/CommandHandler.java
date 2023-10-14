@@ -113,27 +113,27 @@ public record CommandHandler(EasyTeleport mod) implements CommandRegistrationCal
         ServerCommandSource source = context.getSource();
         ServerPlayerEntity origin = source.getPlayerOrThrow();
         Collection<GameProfile> profiles = getProfileArgument(context, TARGET_PLAYER);
-        UUID sourceID = origin.getUuid();
-        UUID targetPlayerID = selectPlayerID(source, origin, profiles);
-        ServerPlayerEntity target = source.getServer().getPlayerManager().getPlayer(targetPlayerID);
+        UUID originID = origin.getUuid();
+        UUID targetID = selectPlayerID(source, origin, profiles);
+        ServerPlayerEntity target = source.getServer().getPlayerManager().getPlayer(targetID);
         if (target == null) {
             playerNotFound(source);
             return 0;
         }
-        List<TeleportRequest> requestList = mod.tpRequests.get(targetPlayerID);
+        List<TeleportRequest> requestList = mod.tpRequests.get(targetID);
         if (requestList == null) {
-            mod.tpRequests.put(targetPlayerID, requestList = new ArrayList<>());
+            mod.tpRequests.put(targetID, requestList = new ArrayList<>());
         } else {
             for (TeleportRequest request : requestList) {
-                if (request.originID.equals(sourceID)) {
+                if (request.originID.equals(originID)) {
                     send(source, false, gray("You have requested to teleport to "), player(target));
                     return 0;
                 }
             }
         }
-        requestList.add(new TeleportRequest(mod.requestTimeout / 50, sourceID, targetPlayerID));
+        requestList.add(new TeleportRequest(mod.requestTimeout / 50, originID, targetID));
         send(source, true, green("Requested to teleport to "), player(target));
-        send(source, true, player(origin), green(" has requested to teleport to you. Type "), yellow("/tpaccept"), green(" to accept."));
+        send(source, true, player(origin), green(" has requested to teleport to you. Type "), yellow("/tpaccept"), green(" to accept"));
         target.playSound(SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(), SoundCategory.PLAYERS, 1.0f, 1.0f);
         return 1;
     }
@@ -142,21 +142,21 @@ public record CommandHandler(EasyTeleport mod) implements CommandRegistrationCal
         ServerCommandSource source = context.getSource();
         ServerPlayerEntity target = source.getPlayerOrThrow();
         Collection<GameProfile> profiles = getProfileArgument(context, origin_PLAYER);
-        UUID targetPlayerID = target.getUuid();
-        UUID sourceID = selectPlayerID(source, target, profiles);
-        ServerPlayerEntity origin = source.getServer().getPlayerManager().getPlayer(sourceID);
+        UUID targetID = target.getUuid();
+        UUID originID = selectPlayerID(source, target, profiles);
+        ServerPlayerEntity origin = source.getServer().getPlayerManager().getPlayer(originID);
         if (origin == null) {
             playerNotFound(source);
             return 0;
         }
-        TeleportRequest request = mod.tpHereRequests.get(sourceID);
+        TeleportRequest request = mod.tpHereRequests.get(originID);
         if (request != null) {
-            send(source, false, player(origin), gray(" has already received a request."));
+            send(source, false, player(origin), gray(" has already received a request"));
             return 0;
         }
-        mod.tpHereRequests.put(sourceID, new TeleportRequest(mod.requestTimeout / 50, sourceID, targetPlayerID));
-        send(source, true, player(target), green(" has requested to teleport you to there. Type "), yellow("/tpaccept"), green(" to accept."));
-        send(source, true, green("Requested to teleport "), player(origin), green(" to you."));
+        mod.tpHereRequests.put(originID, new TeleportRequest(mod.requestTimeout / 50, originID, targetID));
+        send(source, true, player(target), green(" has requested to teleport you to there. Type "), yellow("/tpaccept"), green(" to accept"));
+        send(source, true, green("Requested to teleport "), player(origin), green(" to you"));
         origin.playSound(SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(), SoundCategory.PLAYERS, 1.0f, 1.0f);
         return 1;
     }
@@ -165,19 +165,19 @@ public record CommandHandler(EasyTeleport mod) implements CommandRegistrationCal
         ServerCommandSource source = context.getSource();
         ServerPlayerEntity target = source.getPlayerOrThrow();
         Collection<GameProfile> profiles = getProfileArgument(context, origin_PLAYER);
-        UUID sourceID = selectPlayerID(source, target, profiles);
-        UUID targetPlayerID = target.getUuid();
-        List<TeleportRequest> requestList = mod.tpRequests.get(targetPlayerID);
+        UUID originID = selectPlayerID(source, target, profiles);
+        UUID targetID = target.getUuid();
+        List<TeleportRequest> requestList = mod.tpRequests.get(targetID);
         if (requestList == null || requestList.isEmpty()) {
-            send(source, false, gray("You have no request to accept."));
+            send(source, false, gray("You have no request to accept"));
             return 0;
         }
         for (Iterator<TeleportRequest> iterator = requestList.iterator(); iterator.hasNext(); ) {
             TeleportRequest request = iterator.next();
-            if (!request.originID.equals(sourceID)) {
+            if (!request.originID.equals(originID)) {
                 continue;
             }
-            ServerPlayerEntity origin = source.getServer().getPlayerManager().getPlayer(sourceID);
+            ServerPlayerEntity origin = source.getServer().getPlayerManager().getPlayer(originID);
             if (origin == null) {
                 playerNotFound(source);
                 return 0;
@@ -186,7 +186,7 @@ public record CommandHandler(EasyTeleport mod) implements CommandRegistrationCal
             stack.tpp(source, origin, target, mod.stackDepth);
             iterator.remove();
             if (requestList.isEmpty()) {
-                mod.tpRequests.keySet().remove(targetPlayerID);
+                mod.tpRequests.keySet().remove(targetID);
             }
             return 1;
         }
@@ -238,7 +238,7 @@ public record CommandHandler(EasyTeleport mod) implements CommandRegistrationCal
         ServerPlayerEntity player = source.getPlayerOrThrow();
         Map<String, TeleportAnchor> anchors = ((TeleportStorage) player).easyTeleport$getAnchors();
         if (anchors.size() >= mod.anchorLimit) {
-            send(source, false, red("Anchor count limit exceeded."));
+            send(source, false, red("Anchor count limit exceeded"));
             return 0;
         }
         TeleportAnchor anchor = new TeleportAnchor("home", player);
@@ -252,7 +252,7 @@ public record CommandHandler(EasyTeleport mod) implements CommandRegistrationCal
         ServerPlayerEntity player = source.getPlayerOrThrow();
         Map<String, TeleportAnchor> anchors = ((TeleportStorage) player).easyTeleport$getAnchors();
         if (anchors.isEmpty()) {
-            send(source, true, gray("No anchors set."));
+            send(source, true, gray("No anchors set"));
             return 0;
         }
         ArrayList<String> anchorNames = new ArrayList<>(anchors.keySet());
@@ -269,11 +269,11 @@ public record CommandHandler(EasyTeleport mod) implements CommandRegistrationCal
         ServerPlayerEntity player = source.getPlayerOrThrow();
         Map<String, TeleportAnchor> anchors = ((TeleportStorage) player).easyTeleport$getAnchors();
         if (anchors.isEmpty()) {
-            send(source, true, gray("No anchors set."));
+            send(source, true, gray("No anchors set"));
             return 0;
         } else {
             anchors.clear();
-            send(source, true, green("Anchors cleared."));
+            send(source, true, green("Anchors cleared"));
             return 1;
         }
     }
@@ -283,7 +283,7 @@ public record CommandHandler(EasyTeleport mod) implements CommandRegistrationCal
         ServerPlayerEntity player = source.getPlayerOrThrow();
         Map<String, TeleportAnchor> anchors = ((TeleportStorage) player).easyTeleport$getAnchors();
         if (anchors.size() >= mod.anchorLimit) {
-            send(source, false, red("Anchor count limit exceeded."));
+            send(source, false, red("Anchor count limit exceeded"));
             return 0;
         }
         String anchorName = getString(context, ANCHOR_NAME);
@@ -300,7 +300,7 @@ public record CommandHandler(EasyTeleport mod) implements CommandRegistrationCal
         String anchorName = getString(context, ANCHOR_NAME);
         TeleportAnchor anchor = anchors.get(anchorName);
         if (anchor == null) {
-            send(source, false, gray("Anchor "), red(anchorName), gray(" not found."));
+            send(source, false, gray("Anchor "), red(anchorName), gray(" not found"));
             return 0;
         } else {
             anchors.keySet().remove(anchorName);
@@ -316,20 +316,20 @@ public record CommandHandler(EasyTeleport mod) implements CommandRegistrationCal
         String anchorName = getString(context, ANCHOR_NAME);
         TeleportAnchor anchor = anchors.get(anchorName);
         if (anchor == null) {
-            send(source, false, gray("Anchor "), red(anchorName), gray(" not found."));
+            send(source, false, gray("Anchor "), red(anchorName), gray(" not found"));
             return 0;
         }
         Collection<GameProfile> profiles = getProfileArgument(context, TARGET_PLAYER);
-        UUID sourceID = origin.getUuid();
-        UUID targetPlayerID = selectPlayerID(source, origin, profiles);
-        ServerPlayerEntity target = source.getServer().getPlayerManager().getPlayer(targetPlayerID);
+        UUID originID = origin.getUuid();
+        UUID targetID = selectPlayerID(source, origin, profiles);
+        ServerPlayerEntity target = source.getServer().getPlayerManager().getPlayer(targetID);
         if (target == null) {
             playerNotFound(source);
             return 0;
         }
-        List<ShareRequest> requestList = mod.shareRequests.get(targetPlayerID);
+        List<ShareRequest> requestList = mod.shareRequests.get(targetID);
         if (requestList == null) {
-            mod.shareRequests.put(targetPlayerID, requestList = new ArrayList<>());
+            mod.shareRequests.put(targetID, requestList = new ArrayList<>());
         } else {
             for (ShareRequest request : requestList) {
                 if (request.anchor.name().equals(anchorName)) {
@@ -338,9 +338,9 @@ public record CommandHandler(EasyTeleport mod) implements CommandRegistrationCal
                 }
             }
         }
-        requestList.add(new ShareRequest(mod.requestTimeout / 50, sourceID, targetPlayerID, anchor));
+        requestList.add(new ShareRequest(mod.requestTimeout / 50, originID, targetID, anchor));
         send(source, true, green("Requested to share anchor with "), player(target));
-        send(source, true, player(origin), green(" has requested to share "), anchor(anchorName, anchor), green(" with you. Type "), yellow("/anchor accept"), green(" to accept."));
+        send(source, true, player(origin), green(" has requested to share "), anchor(anchorName, anchor), green(" with you. Type "), yellow("/anchor accept"), green(" to accept"));
         target.playSound(SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(), SoundCategory.PLAYERS, 1.0f, 1.0f);
         return 1;
     }
@@ -352,18 +352,18 @@ public record CommandHandler(EasyTeleport mod) implements CommandRegistrationCal
         String anchorName = getString(context, ANCHOR_NAME);
         TeleportAnchor anchor = anchors.get(anchorName);
         if (anchor == null) {
-            send(source, false, gray("Anchor "), red(anchorName), gray(" not found."));
+            send(source, false, gray("Anchor "), red(anchorName), gray(" not found"));
             return 0;
         }
         for (ServerPlayerEntity target : source.getServer().getPlayerManager().getPlayerList()) {
-            UUID sourceID = origin.getUuid();
-            UUID targetPlayerID = target.getUuid();
-            if (sourceID.equals(targetPlayerID)) {
+            UUID originID = origin.getUuid();
+            UUID targetID = target.getUuid();
+            if (originID.equals(targetID)) {
                 continue;
             }
-            List<ShareRequest> requestList = mod.shareRequests.get(targetPlayerID);
+            List<ShareRequest> requestList = mod.shareRequests.get(targetID);
             if (requestList == null) {
-                mod.shareRequests.put(targetPlayerID, requestList = new ArrayList<>());
+                mod.shareRequests.put(targetID, requestList = new ArrayList<>());
             } else {
                 boolean hasRequest = false;
                 for (ShareRequest request : requestList) {
@@ -377,9 +377,9 @@ public record CommandHandler(EasyTeleport mod) implements CommandRegistrationCal
                     continue;
                 }
             }
-            requestList.add(new ShareRequest(mod.requestTimeout / 50, sourceID, targetPlayerID, anchor));
+            requestList.add(new ShareRequest(mod.requestTimeout / 50, originID, targetID, anchor));
             send(source, true, green("Requested to share anchor with "), player(target));
-            send(source, true, player(origin), green(" has requested to share "), anchor(anchorName, anchor), green(" with you. Type "), yellow("/anchor accept"), green(" to accept."));
+            send(source, true, player(origin), green(" has requested to share "), anchor(anchorName, anchor), green(" with you. Type "), yellow("/anchor accept"), green(" to accept"));
             target.playSound(SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(), SoundCategory.PLAYERS, 1.0f, 1.0f);
         }
         return 1;
@@ -392,7 +392,7 @@ public record CommandHandler(EasyTeleport mod) implements CommandRegistrationCal
         String anchorName = getString(context, ANCHOR_NAME);
         List<ShareRequest> requestList = mod.shareRequests.get(target.getUuid());
         if (requestList == null || requestList.isEmpty()) {
-            send(source, false, gray("You have no request to accept."));
+            send(source, false, gray("You have no request to accept"));
             return 0;
         }
         for (Iterator<ShareRequest> iterator = requestList.iterator(); iterator.hasNext(); ) {
@@ -401,7 +401,7 @@ public record CommandHandler(EasyTeleport mod) implements CommandRegistrationCal
                 continue;
             }
             if (anchors.size() >= mod.anchorLimit) {
-                send(source, false, red("Anchor count limit exceeded."));
+                send(source, false, red("Anchor count limit exceeded"));
             } else {
                 anchors.put(request.anchor.name(), request.anchor);
                 ServerPlayerEntity origin = source.getServer().getPlayerManager().getPlayer(request.originID);
@@ -416,7 +416,7 @@ public record CommandHandler(EasyTeleport mod) implements CommandRegistrationCal
             }
             return 1;
         }
-        send(source, false, gray("Anchor "), red(anchorName), gray(" not found."));
+        send(source, false, gray("Anchor "), red(anchorName), gray(" not found"));
         return 0;
     }
     
@@ -426,12 +426,12 @@ public record CommandHandler(EasyTeleport mod) implements CommandRegistrationCal
         Map<String, TeleportAnchor> anchors = ((TeleportStorage) target).easyTeleport$getAnchors();
         List<ShareRequest> requestList = mod.shareRequests.get(target.getUuid());
         if (requestList == null || requestList.isEmpty()) {
-            send(source, false, gray("You have no request to accept."));
+            send(source, false, gray("You have no request to accept"));
             return 0;
         }
         for (ShareRequest request : requestList) {
             if (anchors.size() >= mod.anchorLimit) {
-                send(source, false, red("Anchor count limit exceeded."));
+                send(source, false, red("Anchor count limit exceeded"));
                 break;
             } else {
                 anchors.put(request.anchor.name(), request.anchor);
@@ -450,7 +450,7 @@ public record CommandHandler(EasyTeleport mod) implements CommandRegistrationCal
     public int listPublicAnchors(CommandContext<ServerCommandSource> context) {
         ServerCommandSource source = context.getSource();
         if (mod.publicAnchors.isEmpty()) {
-            send(source, true, gray("No public anchors set."));
+            send(source, true, gray("No public anchors set"));
             return 0;
         }
         ArrayList<String> anchorNames = new ArrayList<>(mod.publicAnchors.keySet());
@@ -465,11 +465,11 @@ public record CommandHandler(EasyTeleport mod) implements CommandRegistrationCal
     public int clearPublicAnchors(CommandContext<ServerCommandSource> context) {
         ServerCommandSource source = context.getSource();
         if (mod.publicAnchors.isEmpty()) {
-            send(source, true, gray("No public anchors set."));
+            send(source, true, gray("No public anchors set"));
             return 0;
         } else {
             mod.publicAnchors.clear();
-            send(source, true, green("Public anchors cleared."));
+            send(source, true, green("Public anchors cleared"));
             return storePublicAnchors(source, mod.publicAnchors);
         }
     }
@@ -489,7 +489,7 @@ public record CommandHandler(EasyTeleport mod) implements CommandRegistrationCal
         String anchorName = getString(context, ANCHOR_NAME);
         TeleportAnchor anchor = mod.publicAnchors.get(anchorName);
         if (anchor == null) {
-            send(source, false, gray("Public anchor "), red(anchorName), gray(" not found."));
+            send(source, false, gray("Public anchor "), red(anchorName), gray(" not found"));
             return 0;
         } else {
             mod.publicAnchors.keySet().remove(anchorName);
