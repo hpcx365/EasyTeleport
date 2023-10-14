@@ -12,7 +12,7 @@ import java.util.Comparator;
 
 public record TeleportAnchor(String name, Vec3d position, RegistryKey<World> world) {
     
-    public static final Comparator<TeleportAnchor> COMPARATOR = (o1, o2) -> String.CASE_INSENSITIVE_ORDER.compare(o1.name(), o2.name());
+    public static final Comparator<TeleportAnchor> COMPARATOR = (a, b) -> String.CASE_INSENSITIVE_ORDER.compare(a.name(), b.name());
     
     public TeleportAnchor(String name, ServerPlayerEntity player) {
         this(name, player.getPos(), player.getServerWorld().getRegistryKey());
