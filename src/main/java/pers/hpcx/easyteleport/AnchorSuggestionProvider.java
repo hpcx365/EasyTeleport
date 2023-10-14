@@ -22,15 +22,15 @@ public record AnchorSuggestionProvider(EasyTeleport mod) implements SuggestionPr
     public CompletableFuture<Suggestions> getSuggestions(CommandContext<ServerCommandSource> context, SuggestionsBuilder builder) throws CommandSyntaxException {
         ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
         Map<String, TeleportAnchor> anchors = ((TeleportStorage) player).easyTeleport$getAnchors();
-        ArrayList<String> anchorNames = new ArrayList<>(anchors.keySet());
-        ArrayList<String> publicAnchorNames = new ArrayList<>(mod.publicAnchors.keySet());
-        anchorNames.sort(String::compareToIgnoreCase);
-        publicAnchorNames.sort(String::compareToIgnoreCase);
-        for (String anchorName : anchorNames) {
-            builder.suggest(anchorName);
+        ArrayList<TeleportAnchor> anchorList = new ArrayList<>(anchors.values());
+        ArrayList<TeleportAnchor> publicAnchorList = new ArrayList<>(mod.publicAnchors.values());
+        anchorList.sort(TeleportAnchor.COMPARATOR);
+        publicAnchorList.sort(TeleportAnchor.COMPARATOR);
+        for (TeleportAnchor anchor : anchorList) {
+            builder.suggest(anchor.name());
         }
-        for (String anchorName : publicAnchorNames) {
-            builder.suggest(anchorName);
+        for (TeleportAnchor anchor : publicAnchorList) {
+            builder.suggest(anchor.name());
         }
         return builder.buildFuture();
     }

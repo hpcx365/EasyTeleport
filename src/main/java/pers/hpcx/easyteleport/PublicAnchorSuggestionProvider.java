@@ -17,10 +17,10 @@ public record PublicAnchorSuggestionProvider(EasyTeleport mod) implements Sugges
     
     @Override
     public CompletableFuture<Suggestions> getSuggestions(CommandContext<ServerCommandSource> context, SuggestionsBuilder builder) {
-        ArrayList<String> publicAnchorNames = new ArrayList<>(mod.publicAnchors.keySet());
-        publicAnchorNames.sort(String::compareToIgnoreCase);
-        for (String anchorName : publicAnchorNames) {
-            builder.suggest(anchorName);
+        ArrayList<TeleportAnchor> publicAnchorList = new ArrayList<>(mod.publicAnchors.values());
+        publicAnchorList.sort(TeleportAnchor.COMPARATOR);
+        for (TeleportAnchor anchor : publicAnchorList) {
+            builder.suggest(anchor.name());
         }
         return builder.buildFuture();
     }

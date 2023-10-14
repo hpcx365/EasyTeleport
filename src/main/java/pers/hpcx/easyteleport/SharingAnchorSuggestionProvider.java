@@ -22,13 +22,13 @@ public record SharingAnchorSuggestionProvider(EasyTeleport mod) implements Sugge
     public CompletableFuture<Suggestions> getSuggestions(CommandContext<ServerCommandSource> context, SuggestionsBuilder builder) throws CommandSyntaxException {
         ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
         List<ShareRequest> requestList = mod.shareRequests.get(player.getGameProfile().getId());
-        ArrayList<String> anchorNames = new ArrayList<>();
+        ArrayList<TeleportAnchor> anchorList = new ArrayList<>();
         for (ShareRequest request : requestList) {
-            anchorNames.add(request.anchor.name());
+            anchorList.add(request.anchor);
         }
-        anchorNames.sort(String::compareToIgnoreCase);
-        for (String anchorName : anchorNames) {
-            builder.suggest(anchorName);
+        anchorList.sort(TeleportAnchor.COMPARATOR);
+        for (TeleportAnchor anchor : anchorList) {
+            builder.suggest(anchor.name());
         }
         return builder.buildFuture();
     }
